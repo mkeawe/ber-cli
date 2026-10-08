@@ -1110,7 +1110,7 @@ button[data-testid="play-button"][data-ber-word],
   content: attr(data-ber-prompt) " ";
   order: 0;
   white-space: pre;
-  color: var(--ber-fg);
+  color: var(--ber-signal);
   font-size: var(--ber-size);
   flex: none;
   max-width: 60%;
