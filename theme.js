@@ -704,8 +704,9 @@
       const key = document.createElement("button");
       key.type = "button";
       key.dataset.berSearch = "";
-      key.dataset.berWord = "[search]";
-      key.textContent = "[search]";
+      key.dataset.berWord = "[search]"; // CSS draws the word from this, as for every key
+      key.tabIndex = -1;
+      key.setAttribute("aria-hidden", "true"); // the box itself is the control a reader gets
       wrap.querySelector("input")?.before(key);
     }
   }
