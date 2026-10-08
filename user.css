@@ -868,7 +868,7 @@ button[data-testid="play-button"][data-ber-word],
 .main-globalNav-searchInputWrapper input {
   order: 2;
   flex: 1;
-  padding-inline: 0 9ch !important;
+  padding-inline: 0 !important;
   background: transparent !important;
   border: 0 !important;
   outline: 0 !important;
@@ -882,6 +882,36 @@ button[data-testid="play-button"][data-ber-word],
 .main-globalNav-searchInputWrapper form > div:has(svg),
 .main-globalNav-searchInputWrapper [class*="form-input-icon"] > svg {
   display: none !important;
+}
+
+/* [clear] follows what you type instead of sitting pinned over it, and only appears
+   once there is something to clear. */
+.main-globalNav-searchInputSection form {
+  display: flex !important;
+  align-items: center;
+}
+
+.main-globalNav-searchInputSection form > .main-globalNav-searchInputWrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.main-globalNav-searchInputSection form > [class*="form-input-icon__icon--trailing"] {
+  position: static !important;
+  flex: none;
+  inset: auto !important;
+  transform: none !important;
+}
+
+.main-globalNav-searchInputSection form:has(input:placeholder-shown) [class*="form-input-icon__icon--trailing"] {
+  display: none !important;
+}
+
+/* A long path gives way before the cursor does. */
+.main-globalNav-searchInputWrapper::before {
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @keyframes ber-blink {
