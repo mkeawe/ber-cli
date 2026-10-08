@@ -237,6 +237,8 @@ canvas.ber-video {
 .Root__now-playing-bar {
   background-color: var(--ber-bg) !important;
   position: relative;
+  /* The box's layer stays inside its pane, so pop-ups from other panes draw over it. */
+  isolation: isolate;
 }
 
 /* The box is drawn over the pane, so scrolling content never hides it. */
@@ -764,6 +766,8 @@ button[data-testid="play-button"][data-ber-word],
 
 /* The suggestions under the prompt are one box drawn over the screen: black, ruled edge. */
 .main-globalNav-searchSection [role="listbox"] {
+  /* It opens under the prompt line, not across it. */
+  top: calc(100% + 4px) !important;
   background: var(--ber-bg) !important;
   border: 1px solid var(--ber-dim) !important;
   border-radius: 0 !important;
