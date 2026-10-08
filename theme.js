@@ -376,20 +376,33 @@
 
   // ============================================================ no washes
 
-  let signal = "";
+  // The scheme's own colours, as "r,g,b": never mistaken for a wash, however colourful.
+  const own = new Set();
   function chromatic(c) {
     const m = c.match(/rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)/);
     if (!m) return false;
     const [r, g, b] = [+m[1], +m[2], +m[3]];
     const a = m[4] === undefined ? 1 : +m[4];
     if (a < 0.25) return false;
-    if (c === signal) return false;
+    if (own.has(`${r},${g},${b}`)) return false;
     return Math.max(r, g, b) - Math.min(r, g, b) > 40;
+  }
+
+  // Spotify's hard-coded greys (loading bars, placeholders) take the scheme's row colour.
+  function stray(c) {
+    const m = c.match(/rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)/);
+    if (!m) return false;
+    const [r, g, b] = [+m[1], +m[2], +m[3]];
+    const a = m[4] === undefined ? 1 : +m[4];
+    if (own.has(`${r},${g},${b}`) || Math.max(r, g, b) - Math.min(r, g, b) > 8) return false;
+    // Solid dark greys, and the see-through black or white Spotify lays over its own
+    // background for loading bars (only an even grey over a black screen).
+    return (a >= 0.5 && r > 12 && r < 90) || (a >= 0.05 && a < 0.95 && (r <= 12 || r >= 240));
   }
 
   // Colour washes, tinted boxes and gradients Spotify paints from the artwork go flat.
   // Only boxes can paint a wash; text and inline elements are skipped.
-  const BOXES = /^(DIV|SECTION|ASIDE|HEADER|FOOTER|MAIN|NAV|LI|UL|BUTTON|A)$/;
+  const BOXES = /^(DIV|SECTION|ASIDE|HEADER|FOOTER|MAIN|NAV|LI|UL|BUTTON|A|SPAN|P|LABEL)$/;
 
   // Reads only: returns the attribute to set, so a batch can read everything first and
   // write after, instead of making the browser redo its layout between every element.
@@ -397,8 +410,11 @@
     if (!BOXES.test(el.tagName) || el.dataset.berArt !== undefined) return null;
     const cs = getComputedStyle(el);
     const bi = cs.backgroundImage;
+    if (/placeholder\.(webp|png|svg)/.test(bi)) return "berPlaceholder";
     if (bi !== "none" && /gradient/.test(bi) && !/url\(/.test(bi)) return "berFlat";
     if (chromatic(cs.backgroundColor)) return "berTint";
+    // Small boxes only: a full-screen dimming layer behind a dialog stays as it is.
+    if (stray(cs.backgroundColor) && el.offsetWidth < 600 && el.offsetHeight < 400) return "berGrey";
     if (el.tagName !== "DIV") return null;
     for (const p of ["::before", "::after"]) {
       const ps = getComputedStyle(el, p);
@@ -411,6 +427,22 @@
   function flatten(el) {
     const k = washOf(el);
     if (k) el.dataset[k] = "";
+    if (k === "berPlaceholder") placeholder(el);
+  }
+
+  // Spotify tiles a picture of rounded grey rows while a list loads. It is redrawn as the
+  // same rows, square, in the scheme's row colour.
+  function placeholder(el) {
+    const size = getComputedStyle(el).backgroundSize;
+    const [w, h] = /px/.test(size) ? size.split(" ").map(parseFloat) : [0, 0];
+    if (!w || !h) { el.style.setProperty("background-image", "none", "important"); return; }
+    const c = css("--spice-highlight") || "#171717";
+    const art = Math.min(h - 16, 48);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
+      `<rect x="8" y="${(h - art) / 2}" width="${art}" height="${art}" fill="${c}"/>` +
+      `<rect x="${art + 20}" y="${h / 2 - 12}" width="${Math.round((w - art - 28) * 0.8)}" height="9" fill="${c}"/>` +
+      `<rect x="${art + 20}" y="${h / 2 + 4}" width="${Math.round((w - art - 28) * 0.5)}" height="9" fill="${c}"/></svg>`;
+    el.style.setProperty("background-image", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`, "important");
   }
 
   const pending = new Set();
@@ -444,10 +476,15 @@
     if (t.textContent !== text) t.textContent = text;
   }
 
+  // Spicetify's player calls throw until a track has loaded after launch.
+  function safe(f, fallback) {
+    try { const v = f(); return Number.isFinite(v) ? v : fallback; } catch { return fallback; }
+  }
+
   function bars() {
     for (const doc of docs) {
-      doc.querySelectorAll('[data-testid="playback-progressbar"]').forEach((c) => bar(c, Spicetify.Player.getProgressPercent(), true));
-      doc.querySelectorAll(".volume-bar__slider-container").forEach((c) => bar(c, Spicetify.Player.getVolume(), false));
+      doc.querySelectorAll('[data-testid="playback-progressbar"]').forEach((c) => bar(c, safe(() => Spicetify.Player.getProgressPercent(), 0), true));
+      doc.querySelectorAll(".volume-bar__slider-container").forEach((c) => bar(c, safe(() => Spicetify.Player.getVolume(), 0), false));
     }
   }
 
@@ -516,7 +553,10 @@
       if (k) washes.push([el, k]);
     }
     // Write phase.
-    for (const [el, k] of washes) el.dataset[k] = "";
+    for (const [el, k] of washes) {
+      el.dataset[k] = "";
+      if (k === "berPlaceholder") placeholder(el);
+    }
     for (const el of els) {
       switch (el.tagName) {
         case "svg": iconify(el); continue;
@@ -631,12 +671,11 @@
 
   face().finally(() => {
     measure();
-    signal = getComputedStyle(document.documentElement).getPropertyValue("--spice-button").trim();
-    const probe = document.createElement("i");
-    probe.style.backgroundColor = signal;
-    document.body.appendChild(probe);
-    signal = getComputedStyle(probe).backgroundColor;
-    probe.remove();
+    for (const k of ["main", "main-elevated", "highlight", "highlight-elevated", "sidebar", "player", "card",
+      "misc", "text", "subtext", "button", "button-active", "tab-active", "notification", "notification-error"]) {
+      const rgb = css(`--spice-rgb-${k}`).replace(/\s/g, "");
+      if (rgb) own.add(rgb);
+    }
     attach(document, true);
   });
   Spicetify.Platform.History.listen(() => { prompt(); setTimeout(() => reflatten(document.body), 1500); });

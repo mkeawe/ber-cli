@@ -284,6 +284,21 @@ canvas.ber-video {
   background-color: transparent !important;
 }
 
+/* Spotify's hard-coded greys (loading bars, placeholders) take the scheme's row colour. */
+[data-ber-grey] {
+  background-color: var(--ber-row) !important;
+}
+
+:root {
+  --image-placeholder-bg-color: var(--ber-row);
+  --generic-tooltip-background-color: var(--ber-bg);
+}
+
+/* The drag handle between panes. */
+.LayoutResizer__input {
+  background: transparent !important;
+}
+
 [data-ber-word][data-ber-tint] {
   outline: none !important;
 }
