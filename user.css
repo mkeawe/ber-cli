@@ -1110,7 +1110,7 @@ button[data-testid="play-button"][data-ber-word],
   content: attr(data-ber-prompt) " ";
   order: 0;
   white-space: pre;
-  color: var(--ber-signal);
+  color: var(--ber-fg);
   font-size: var(--ber-size);
   flex: none;
   max-width: 60%;
@@ -1123,7 +1123,7 @@ button[data-testid="play-button"][data-ber-word],
 .main-globalNav-searchInputWrapper:has(input:placeholder-shown:not(:focus))::after {
   content: "[search]";
   order: 1;
-  color: var(--ber-dim);
+  color: var(--ber-fg);
 }
 
 .main-globalNav-searchInputWrapper input {

@@ -700,6 +700,13 @@
     if (wrap.dataset.berPrompt !== text) wrap.dataset.berPrompt = text;
   }
 
+  // The prompt and [search] are drawn beside the box, so a click on either lands in it.
+  document.addEventListener("click", (e) => {
+    const wrap = e.target.closest?.(".main-globalNav-searchInputWrapper");
+    const input = wrap?.querySelector("input");
+    if (input && e.target !== input) input.focus();
+  });
+
   // ============================================================ compact window
 
   // Below these page widths the status line runs out of room: short marks, fewer keys.
