@@ -241,7 +241,7 @@
     [/^What's New$/, "news"], [/^Listening activity$/, "friends"], [/^Marketplace$/, "market"],
     [/^Clear search field$/, "clear"],
     [/^(Save|Add) .*to Your Library$/i, "save"], [/^Remove .*from Your Library$/i, "saved", true],
-    [/^Expand Your Library/i, "expand"], [/Your Library$/, "lib"], [/^Create$/, "new"],
+    [/^Search in/i, "find"], [/^Expand Your Library/i, "expand"], [/^(Open|Collapse) Your Library$/i, "lib"], [/^Create$/, "new"],
     [/^Previous$/, "prev"], [/^Next$/, "next"],
     [/^Enable smart shuffle/i, "shuffle: on", true], [/^Disable shuffle/i, "shuffle: smart", true],
     [/^Enable shuffle/i, "shuffle: off"], [/^Shuffle/i, "shuffle"],
@@ -312,7 +312,9 @@
     if (host.dataset.testid === "cover-art-button" || !host.matches(HOST)) return;
     svg = svg || host.querySelector("svg");
     const label = labelOf(host, svg);
-    const always = host.dataset.testid === "user-widget-link";
+    // Controls that show their own text but get a key anyway: the account name, and the
+    // library title, which reads [lib] in both its collapsed and expanded states.
+    const always = host.dataset.testid === "user-widget-link" || /^(Open|Collapse) Your Library$/.test(label);
     if (!always && (!svg || shownText(host))) {
       if (host.dataset.berWord) { delete host.dataset.berWord; delete host.dataset.berOn; }
       return;
@@ -432,7 +434,8 @@
       container.prepend(t);
     }
     const cell = parseFloat(getComputedStyle(t).fontSize) * RATIO;
-    const n = Math.max(4, Math.floor(container.clientWidth / cell) - 2);
+    // Characters that fit, less the two brackets, with a pixel of slack for rounding.
+    const n = Math.max(1, Math.floor((container.clientWidth - 1) / cell) - 2);
     const f = Math.max(0, Math.min(1, fraction || 0));
     const filled = Math.round(f * n);
     const text = head
@@ -519,7 +522,8 @@
         case "svg": iconify(el); continue;
         case "VIDEO": case "CANVAS": moverArt(el); continue;
       }
-      if (el.dataset?.testid === "user-widget-link") word(el);
+      if (el.dataset?.separator !== undefined && el.textContent.trim() === "•") el.dataset.berDot = "";
+      if (el.dataset?.testid === "user-widget-link" || /^(Open|Collapse) Your Library$/.test(el.getAttribute?.("aria-label") || "")) word(el);
     }
     // Pictures last: they measure sizes, once, after the writes.
     for (const el of els) {

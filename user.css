@@ -87,6 +87,14 @@ canvas[data-ber-drawn]:not(.ber-video) {
   opacity: 0 !important;
 }
 
+/* Spotify's own animations are hidden from their first frame, so the smooth
+   version never shows before the character version takes its place. */
+.Root__right-sidebar canvas:not(.ber-video),
+.Root__main-view canvas:not(.ber-video),
+.Root__now-playing-bar canvas:not(.ber-video) {
+  opacity: 0 !important;
+}
+
 canvas.ber-video {
   z-index: 1;
 }
@@ -367,12 +375,36 @@ html.ber-mini,
 }
 
 /* Words laid over a picture get a black ground of their own, as a terminal would print them. */
-.main-entityHeader-headerText > *,
-.main-entityHeader-headerText span,
+/* The ground sits on the words themselves, so it follows each line however they wrap. */
+.main-entityHeader-headerText :is(h1, h2, span, a, p, button):not(:has(*)):not([class*="visually-hidden"]),
 .main-entityHeader-headerText h1 {
+  display: inline !important;
   background: var(--ber-bg) !important;
-  width: fit-content;
-  padding-inline: 0.5ch;
+  padding: 0.15em 0.5ch;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  text-wrap: wrap !important;
+}
+
+.main-entityHeader-headerText h1 :is(span, a) {
+  background: none !important;
+}
+
+/* The details line sits tight: "micah · 581 songs, 35 hr". Only its ends are padded. */
+.main-entityHeader-headerText .main-entityHeader-metaDataText *,
+.main-entityHeader-headerText :has(> [data-separator]) *,
+.main-entityHeader-headerText [data-separator] {
+  padding-inline: 0 !important;
+  margin-inline: 0 !important;
+}
+
+.main-entityHeader-headerText [data-ber-dot] {
+  margin-inline: 1ch !important;
+}
+
+/* One dot between details, not two: Spotify draws its own in front as well. */
+.main-entityHeader-metaDataText::before {
+  content: none !important;
 }
 
 /* Page headers: no darkening gradient behind the title. Artist photos stay. */
@@ -396,6 +428,11 @@ html.ber-mini,
 .x-entityImage-imageContainer::after {
   background: transparent !important;
   background-image: none !important;
+}
+
+/* The dimming sheet over artist photos goes; the photo is already drawn dark. */
+[data-testid="overscroll-background"] {
+  background: transparent !important;
 }
 
 /* An image not yet loaded is empty space, not a guess at its colour. */
@@ -636,6 +673,14 @@ img[style*="content"] {
   color: var(--ber-signal) !important;
 }
 
+/* Scroll arrows sit over the end of a row: a solid ground so they mask what's under them. */
+.spicetify-sc-chevronBtn[data-ber-word],
+.search-searchCategory-carouselButton[data-ber-word],
+[class*="overflow-button"] [data-ber-word],
+[data-testid^="overflow-button"][data-ber-word] {
+  background: var(--ber-bg) !important;
+}
+
 /* The page's play key: the one filled block. */
 button[data-testid="play-button"][data-ber-word],
 [data-testid="action-bar-row"] .main-playButton-PlayButton [data-ber-word] {
@@ -674,6 +719,13 @@ button[data-testid="play-button"][data-ber-word],
   border: 0 !important;
   background: transparent !important;
   padding-inline: 0.5ch !important;
+  gap: 0 !important;
+}
+
+/* Their icons (dropdown arrows and the like) go, and so does the space kept for them. */
+[data-encore-id="buttonSecondary"]:not([data-ber-word]) [class*="button__icon-wrapper"],
+[data-encore-id="buttonTertiary"]:not([data-ber-word]) [class*="button__icon-wrapper"] {
+  display: none !important;
 }
 
 [data-encore-id="buttonSecondary"]:not([data-ber-word])::before,
@@ -729,6 +781,37 @@ button[data-testid="play-button"][data-ber-word],
   opacity: 0 !important;
   position: relative;
   z-index: 1;
+}
+
+/* The status line: the right-hand keys take the room they need, the progress bar
+   gives way, and the track name gives way before either (ending in an ellipsis). */
+.main-nowPlayingBar-right {
+  width: auto !important;
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+
+.main-nowPlayingBar-center {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  margin-inline: 2ch !important;
+}
+
+.main-nowPlayingBar-left {
+  flex: 0 1 25% !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+/* A space between [vol] and its bar, and between the player's keys. */
+.volume-bar__slider-container {
+  margin-inline-start: 1ch;
+  min-width: 7ch !important;
+}
+
+.Root__now-playing-bar [data-ber-word] {
+  margin-inline: 0.5ch !important;
 }
 
 .ber-bar {
@@ -804,7 +887,69 @@ button[data-testid="play-button"][data-ber-word],
   color: var(--ber-dim) !important;
 }
 
+/* ----------------------------------------------------------- long lines */
 
+/* Long titles and artist lists don't slide sideways under a fade: they stop, and a line
+   that doesn't fit ends in an ellipsis, as a terminal would print it. */
+:has(> .main-watchFeed-contentWrapper) {
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.main-watchFeed-contentWrapper {
+  display: block !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-watchFeed-contentWrapper > * {
+  display: inline !important;
+}
+
+/* ----------------------------------------------------------- now playing panel */
+
+/* Its header ([close] title [...] [expand]) is a solid bar with a rule under it, so a
+   bright cover or Canvas scrolling beneath never makes it hard to read. */
+.main-nowPlayingView-headerWrapper {
+  background: var(--ber-bg) !important;
+  background-image: none !important;
+  border-bottom: 1px solid var(--ber-box) !important;
+  opacity: 1 !important;
+  z-index: 10 !important;
+  transition: none !important;
+}
+
+.main-nowPlayingView-headerWrapper * {
+  background-color: transparent !important;
+}
+
+/* Collapsed, the panel is a thin strip: its key reads downwards to fit. */
+[data-ber-word][aria-label="Show Now Playing view"] {
+  writing-mode: vertical-rl;
+  padding: 0.5ch 0 !important;
+}
+
+/* ----------------------------------------------------------- library header */
+
+/* Expanded, the header reads [lib] [new] [expand]; Spotify's slide-in of the title is undone. */
+.main-yourLibraryX-headerContent {
+  gap: 1ch;
+}
+
+.main-yourLibraryX-collapseButton button,
+.main-yourLibraryX-collapseButton > div {
+  transform: none !important;
+  margin-inline: 0 !important;
+}
+
+/* ----------------------------------------------------------- collapsed library */
 
 /* Collapsed, the library is a narrow column: its keys sit centred in it. */
 .main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
@@ -956,6 +1101,28 @@ div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::aft
 [aria-checked="true"] > [class*="legacy-chip__inner"],
 [aria-checked="true"] [class*="legacy-chip__inner"] {
   background: var(--ber-fg) !important;
+  color: var(--ber-bg) !important;
+}
+
+/* ----------------------------------------------------------- tabs */
+
+/* Tabs read like the filter chips: plain words, the chosen one in reverse video. */
+[role="tablist"] [role="tab"] {
+  border-radius: 0 !important;
+  padding: 0.25em 0.75ch !important;
+}
+
+[role="tablist"] [role="tab"]::after,
+[role="tablist"] [role="tab"]::before {
+  display: none !important;
+}
+
+[role="tablist"] [role="tab"][aria-selected="true"] {
+  background: var(--ber-fg) !important;
+}
+
+[role="tablist"] [role="tab"][aria-selected="true"],
+[role="tablist"] [role="tab"][aria-selected="true"] * {
   color: var(--ber-bg) !important;
 }
 
