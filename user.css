@@ -1118,11 +1118,12 @@ button[data-testid="play-button"][data-ber-word],
   text-overflow: ellipsis;
 }
 
+/* At rest the prompt offers [search], a key like any other; the cursor only appears once
+   the box is clicked, since a blinking block reads as "type here". */
 .main-globalNav-searchInputWrapper:has(input:placeholder-shown:not(:focus))::after {
-  content: "█";
+  content: "[search]";
   order: 1;
-  color: var(--ber-fg);
-  animation: ber-blink 1s steps(1) infinite;
+  color: var(--ber-dim);
 }
 
 .main-globalNav-searchInputWrapper input {
@@ -1162,9 +1163,6 @@ button[data-testid="play-button"][data-ber-word],
   display: none !important;
 }
 
-@keyframes ber-blink {
-  50% { opacity: 0; }
-}
 
 /* ----------------------------------------------------------- home filters */
 
