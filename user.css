@@ -599,9 +599,18 @@ img[style*="content"] {
   opacity: 1 !important;
 }
 
-/* `ls` does not show thumbnails. */
-.main-trackList-trackListRow img {
+/* `ls` does not show thumbnails, and a row's icons are its keys' words (theme.js). The
+   loading picture Spotify tiles behind each row section goes here, not per row. */
+.main-trackList-trackListRow img,
+.main-trackList-trackListRow svg:not([data-ber-word] svg) {
   display: none !important;
+}
+
+.main-trackList-rowSectionIndex,
+.main-trackList-rowSectionStart,
+.main-trackList-rowSectionVariable,
+.main-trackList-rowSectionEnd {
+  background-image: none !important;
 }
 
 /* No photographs painted behind things. */
@@ -658,6 +667,7 @@ img[style*="content"] {
   padding: 0.25em 0.5ch !important;
   background: transparent !important;
   border: 0 !important;
+  outline: none !important; /* Spotify outlines some keys inline (the DJ's blue) */
   color: var(--ber-fg) !important;
   text-decoration: none !important;
 }
@@ -822,6 +832,33 @@ button[data-testid="play-button"][data-ber-word],
   margin-inline: 0.5ch !important;
 }
 
+/* A compact window (theme.js marks the page): the status line keeps to short marks,
+   drops its least-used keys, and the volume bar gives way to its [vol] toggle. */
+[data-ber-narrow] .Root__now-playing-bar [data-ber-word] {
+  margin-inline: 0.25ch !important;
+}
+
+[data-ber-narrow] .Root__now-playing-bar [data-testid="pip-toggle-button"],
+[data-ber-narrow] .Root__now-playing-bar [data-testid="fullscreen-mode-button"],
+[data-ber-narrow] .Root__now-playing-bar button[aria-label="Connect to a device"],
+[data-ber-narrow] .main-nowPlayingBar-left [data-ber-word] {
+  display: none !important;
+}
+
+[data-ber-narrow] .volume-bar__slider-container {
+  display: none !important;
+}
+
+[data-ber-narrow] .main-nowPlayingBar-left {
+  flex: 0 1 20% !important;
+}
+
+[data-ber-tiny] .Root__now-playing-bar [data-testid="lyrics-button"],
+[data-ber-tiny] .Root__now-playing-bar [data-testid="control-button-queue"],
+[data-ber-tiny] .main-nowPlayingBar-left {
+  display: none !important;
+}
+
 .ber-bar {
   position: absolute;
   left: 0;
@@ -964,6 +1001,32 @@ button[data-testid="play-button"][data-ber-word],
   background-color: transparent !important;
 }
 
+/* Its keys stay put: Spotify slides [close] out and fades the others until the panel is
+   hovered, and a key that hides is not a key. */
+.main-nowPlayingView-headerWrapper > *,
+.main-nowPlayingView-headerButtonWrapper {
+  transform: none !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* The track's name and artist sit over the lower part of the Canvas backdrop: they get a
+   black ground of their own, as words over any picture do. */
+.main-nowPlayingView-nowPlayingWidget .main-trackInfo-container,
+.main-nowPlayingView-nowPlayingWidget [class*="trackInfo"] {
+  background: var(--ber-bg) !important;
+}
+
+/* ...and sit above the drawn Canvas, which is positioned and would otherwise paint over them. */
+.main-nowPlayingView-nowPlayingWidget .main-nowPlayingView-contextItemInfo {
+  position: relative;
+  z-index: 1;
+}
+
+.main-nowPlayingView-nowPlayingWidget .main-trackInfo-container {
+  padding: 0.25em 0.5ch !important;
+}
+
 /* Collapsed, the panel is a thin strip: its key reads downwards to fit. */
 [data-ber-word][aria-label="Show Now Playing view"] {
   writing-mode: vertical-rl;
@@ -1019,6 +1082,12 @@ button[data-testid="play-button"][data-ber-word],
 .main-globalNav-searchInputSection {
   width: min(760px, 56vw) !important;
   max-width: none !important;
+}
+
+/* In a compact window the prompt takes what the keys at either end leave it. */
+[data-ber-narrow] .main-globalNav-searchInputSection {
+  width: 100% !important;
+  min-width: 14ch;
 }
 
 .main-globalNav-searchInputSection form {
@@ -1184,9 +1253,18 @@ button[data-testid="play-button"][data-ber-word],
   color: var(--ber-dim);
 }
 
+/* The subtitle gives way (with an ellipsis) before the title or [Show all] do. */
 [data-ber-shelf-column] > p {
   margin: 0 !important;
   white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-ber-shelf-column] > h2 {
+  flex: 0 0 auto;
 }
 
 [class*="list-row__slot"] a {

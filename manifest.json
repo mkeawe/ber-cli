@@ -1,13 +1,13 @@
 [
   {
     "name": "ber-cli",
-    "branch": "v1.3.8",
+    "branch": "v1.3.9",
     "description": "Spotify as a terminal, set in Departure Mono. Covers drawn in characters, every icon a word, one size, grey on black, one signal colour.",
     "preview": "preview.png",
     "readme": "README.md",
     "usercss": "user.css",
     "schemes": "color.ini",
-    "include": ["https://raw.githubusercontent.com/mkeawe/ber-cli/v1.3.8/theme.js"],
+    "include": ["https://raw.githubusercontent.com/mkeawe/ber-cli/v1.3.9/theme.js"],
     "authors": [{ "name": "GENTLE ENGINES", "url": "https://github.com/mkeawe/ber-cli" }],
     "tags": ["dark", "minimal", "monospace", "terminal", "ascii"]
   }

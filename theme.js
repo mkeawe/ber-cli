@@ -64,10 +64,15 @@
   // Draws any picture source (image or video frame) as characters into `out`.
   // With `cover`, the source is cropped to the box the way object-fit: cover does.
   // Returns the summed brightness, so a protected (blacked-out) video can be told apart.
-  function paint(source, w, h, out, cover) {
+  function grid(w, h) {
     const cols = Math.max(6, Math.round(w / CELL));
     const size = w / cols / RATIO;
     const rows = Math.max(3, Math.round(h / (size * 1.2)));
+    return { cols, rows, size };
+  }
+
+  function paint(source, w, h, out, cover) {
+    const { cols, rows, size } = grid(w, h);
     const lineH = h / rows;
 
     const sample = sampleCanvas;
@@ -76,7 +81,9 @@
     const sctx = sample.getContext("2d", { willReadFrequently: true });
     const sw = source.videoWidth || source.naturalWidth || source.width;
     const sh = source.videoHeight || source.naturalHeight || source.height;
-    if (cover && sw && sh) {
+    if (sw === cols && sh === rows) {
+      sctx.drawImage(source, 0, 0); // already sampled to the grid
+    } else if (cover && sw && sh) {
       const scale = Math.max(w / sw, h / sh);
       const cw = w / scale, ch = h / scale;
       sctx.drawImage(source, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, cols, rows);
@@ -89,7 +96,7 @@
     const dpr = window.devicePixelRatio || 1;
     if (out.width !== Math.round(w * dpr)) out.width = Math.round(w * dpr);
     if (out.height !== Math.round(h * dpr)) out.height = Math.round(h * dpr);
-    const ctx = out.getContext("2d");
+    const ctx = out.getContext("2d", out === outCanvas ? { willReadFrequently: true } : undefined);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // Clear, not filled: the screen shows through between characters, so drawings
     // stay right when the scheme changes.
@@ -122,10 +129,14 @@
   function art(src, w, h) {
     const key = `${src}|${w}x${h}`;
     if (!arts.has(key)) {
-      arts.set(key, load(readable(src)).then(idle).then((im) => {
+      arts.set(key, load(readable(src)).then(idle).then(async (im) => {
         if (!im) return null;
         try {
-          paint(im, w, h, outCanvas);
+          // The downscale to the character grid is the slow part; a worker does it.
+          const { cols, rows } = grid(w, h);
+          const bmp = await createImageBitmap(im, { resizeWidth: cols, resizeHeight: rows, resizeQuality: "high" }).catch(() => im);
+          paint(bmp, w, h, outCanvas);
+          if (bmp !== im) bmp.close();
           // Encoded off the main thread, so drawing many covers never stalls typing. A data
           // URL, not a blob URL: nothing to revoke, and it lives only as long as its element.
           return new Promise((res) => outCanvas.toBlob((b) => {
@@ -189,13 +200,14 @@
 
   // Sizes come from the observers when they have them, so no image is measured twice.
   async function imgArt(img, sw, sh) {
-    // Marketplace previews are screenshots of themes and extensions: left as they are.
-    if (img.closest('[class*="marketplace-card"]')) return;
     const src = img.currentSrc || img.src;
     if (!src || src.startsWith("data:")) return;
     const w = Math.round(sw ?? img.clientWidth);
     const h = Math.round(sh ?? img.clientHeight);
     if (!w || !h) return;
+    // Marketplace previews are screenshots of themes and extensions: left as they are.
+    if (img.dataset.berPreview === undefined) img.dataset.berPreview = img.closest('[class*="marketplace-card"]') ? "1" : "";
+    if (img.dataset.berPreview) return;
     // Too small to draw in characters (menu and list icons): it goes.
     if (w < 20 || h < 20) { img.dataset.berHide = ""; return; }
     const key = `${src}|${w}x${h}`;
@@ -233,6 +245,10 @@
   // A video that can't be read is hidden and the cover shows; one that reads as solid black
   // (protected video) is left to play as it is. An animation that can't be read gets the ring.
   const movers = new Set();
+  // Movers are painted only while on screen.
+  const onScreen = new IntersectionObserver((entries) => {
+    for (const e of entries) { const item = e.target.berItem; if (item) item.seen = e.isIntersecting; }
+  });
   function moverArt(v) {
     if (v.dataset.berMover || v.classList.contains("ber-video")) return;
     v.dataset.berMover = "1";
@@ -240,25 +256,32 @@
     out.className = "ber-video";
     v.after(out);
     const video = v.tagName === "VIDEO";
-    movers.add({ v, out, dark: 0, video, cover: video && getComputedStyle(v).objectFit === "cover" });
+    const item = { v, out, dark: 0, video, cover: video && getComputedStyle(v).objectFit === "cover", seen: true, geom: "", at: -1 };
+    v.berItem = item;
+    movers.add(item);
+    onScreen.observe(v);
   }
   setInterval(() => {
     for (const item of movers) {
       const { v, out } = item;
-      if (!v.isConnected) { out.remove(); movers.delete(item); continue; }
+      if (!v.isConnected) { out.remove(); movers.delete(item); onScreen.unobserve(v); continue; }
+      if (!item.seen) continue;
       const w = Math.round(v.clientWidth), h = Math.round(v.clientHeight);
       if (w < 40 || h < 40 || (item.video && v.readyState < 2)) continue;
-      out.style.cssText = `position:absolute;left:${v.offsetLeft}px;top:${v.offsetTop}px;width:${w}px;height:${h}px;pointer-events:none;`;
+      const geom = `${v.offsetLeft},${v.offsetTop},${w},${h}`;
+      if (geom !== item.geom) { item.geom = geom; out.style.cssText = `position:absolute;left:${v.offsetLeft}px;top:${v.offsetTop}px;width:${w}px;height:${h}px;pointer-events:none;`; }
       if (item.still) continue;
+      // A paused video is painted once per frame position, not ten times a second.
+      if (item.video) { if (v.paused && v.currentTime === item.at && item.drawn) continue; item.at = v.currentTime; }
       try {
         const light = paint(v, w, h, out, item.cover);
         item.dark = light < 1 && !(item.video && v.paused) ? item.dark + 1 : 0;
         if (item.dark > 30) {
-          if (item.video) { delete v.dataset.berDrawn; out.remove(); movers.delete(item); continue; }
+          if (item.video) { delete v.dataset.berDrawn; out.remove(); movers.delete(item); onScreen.unobserve(v); continue; }
           still(item, w, h);
           continue;
         }
-        v.dataset.berDrawn = "";
+        if (!item.drawn) { item.drawn = true; v.dataset.berDrawn = ""; }
       } catch {
         if (item.video) {
           v.dataset.berHide = "";
@@ -389,8 +412,9 @@
       return;
     }
     const inRow = host.closest(".main-trackList-trackListRow");
-    const inMini = host.ownerDocument !== document;
-    const text = inRow && SHORT[w] ? SHORT[w] : `[${inMini && MINI[w] || w}]`;
+    // The miniplayer is narrow, and so is a compact window's status line: short marks.
+    const compact = host.ownerDocument !== document || (narrow && host.closest(".Root__now-playing-bar"));
+    const text = inRow && SHORT[w] ? SHORT[w] : `[${compact && MINI[w] || w}]`;
     setWord(host, text);
     const pressed = host.getAttribute("aria-pressed") === "true" || host.getAttribute("aria-checked") === "true" ||
       host.getAttribute("aria-selected") === "true";
@@ -458,7 +482,7 @@
   }
 
   function iconify(svg) {
-    if (svg.closest("[data-ber-word], .ber-keep")) return;
+    if (svg.closest("[data-ber-word], .ber-keep, .main-trackList-trackListRow")) return;
     if (standCandidate(svg)) return;
     const host = svg.closest(HOST);
     // A link that shows a picture (a cover) keeps the picture; only the icon goes.
@@ -546,12 +570,12 @@
 
   // Colour washes, tinted boxes and gradients Spotify paints from the artwork go flat.
   // Only boxes can paint a wash; text and inline elements are skipped.
-  const BOXES = /^(DIV|SECTION|ASIDE|HEADER|FOOTER|MAIN|NAV|LI|UL|BUTTON|A|SPAN|P|LABEL)$/;
+  const BOXES = /^(DIV|SPAN)$/; // every wash seen so far sat on one of these
 
   // Reads only: returns the attribute to set, so a batch can read everything first and
   // write after, instead of making the browser redo its layout between every element.
   function washOf(el) {
-    if (!BOXES.test(el.tagName) || el.dataset.berArt !== undefined) return null;
+    if (!BOXES.test(el.tagName) || el.dataset.berArt !== undefined || el.closest(".main-trackList-trackListRow")) return null;
     const cs = getComputedStyle(el);
     const bi = cs.backgroundImage;
     if (/placeholder\.(webp|png|svg)/.test(bi)) return "berPlaceholder";
@@ -559,7 +583,7 @@
     if (chromatic(cs.backgroundColor)) return "berTint";
     // Small boxes only: a full-screen dimming layer behind a dialog stays as it is.
     if (stray(cs.backgroundColor) && el.offsetWidth < 600 && el.offsetHeight < 400) return "berGrey";
-    if (el.tagName !== "DIV") return null;
+    if (el.tagName !== "DIV" || !el.className) return null;
     for (const p of ["::before", "::after"]) {
       const ps = getComputedStyle(el, p);
       if (ps.content === "none") continue;
@@ -676,6 +700,23 @@
     if (wrap.dataset.berPrompt !== text) wrap.dataset.berPrompt = text;
   }
 
+  // ============================================================ compact window
+
+  // Below these page widths the status line runs out of room: short marks, fewer keys.
+  let narrow = false;
+  function fit() {
+    const width = document.documentElement.clientWidth;
+    const n = width < 1400, t = width < 1000; // CSS px: Spotify zooms the page out, so a window is ~1.2x wider in these
+    const root = document.documentElement.dataset;
+    if (t) root.berTiny = ""; else delete root.berTiny;
+    if (n === narrow && (t ? "" : undefined) === root.berTiny) return;
+    if (n) root.berNarrow = ""; else delete root.berNarrow;
+    if (n !== narrow) {
+      narrow = n;
+      document.querySelectorAll(".Root__now-playing-bar [data-ber-word]").forEach((b) => word(b));
+    }
+  }
+
   // ============================================================ window buttons
 
   // macOS draws close / minimise / zoom in the top-left 78pt of the window, in screen
@@ -709,6 +750,8 @@
 
   function watchImg(img, lazy) {
     if (img.dataset.ber) return;
+    // Track rows hide their thumbnails: nothing to draw, nothing to watch.
+    if (img.closest(".main-trackList-trackListRow")) { img.dataset.ber = "x"; return; }
     img.dataset.ber = "1";
     if (lazy) seen.observe(img); else imgArt(img);
     sized.observe(img);
@@ -741,6 +784,7 @@
         case "H2": if (el.parentElement?.className.includes("list-row__column")) tagShelf(el); continue;
       }
       const cls = typeof el.className === "string" ? el.className : "";
+      if (el.tagName === "BUTTON" && el.hasAttribute("aria-label") && el.closest(".main-trackList-trackListRow")) { word(el); continue; }
       if (cls.includes("main-watchFeed-contentWrapper")) el.parentElement.dataset.berMarquee = "";
       else if (cls.includes("search-searchCategory-contentArea")) tagFilters(el);
       else if (cls.includes("main-playButton-PlayButton")) plays = true;
@@ -777,9 +821,9 @@
             continue;
           }
           if (t.tagName === "IMG") {
-            t.style.removeProperty("content");
-            drawn.delete(t);
-            imgArt(t);
+            // A recycled row's new src: the old drawing goes now; the new one is drawn
+            // by the load listener once the image has arrived, never synchronously here.
+            if (t.dataset.ber !== "x") { t.style.removeProperty("content"); drawn.delete(t); }
             continue;
           }
           if (t.matches?.(HOST) && (t.dataset.berWord !== undefined || t.querySelector("svg"))) word(t);
@@ -885,12 +929,14 @@
     clearTimeout(navT);
     if ((loc?.pathname || "").startsWith("/search")) return;
     navT = setTimeout(() => {
-      const carriers = document.querySelectorAll('.Root__main-view [style*="--"]');
+      const carriers = document.querySelectorAll('.Root__main-view :is([style*="--background-"], [style*="--cinema"], [style*="--extracted"], [style*="--bg-color"], [style*="-color:"])');
       if (carriers.length) { carriers.forEach(reflatten); }
     }, 1500);
   });
-  window.addEventListener("resize", clearLights);
+  let fitT = 0;
+  window.addEventListener("resize", () => { clearLights(); clearTimeout(fitT); fitT = setTimeout(fit, 150); });
   clearLights();
+  fit();
   setInterval(syncHover, 4000);
   Spicetify.Player.addEventListener("onprogress", bars);
   setInterval(bars, 500);
