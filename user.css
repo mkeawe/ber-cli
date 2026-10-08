@@ -1118,12 +1118,16 @@ button[data-testid="play-button"][data-ber-word],
   text-overflow: ellipsis;
 }
 
-/* At rest the prompt offers [search], a key like any other; the cursor only appears once
-   the box is clicked, since a blinking block reads as "type here". */
-.main-globalNav-searchInputWrapper:has(input:placeholder-shown:not(:focus))::after {
-  content: "[search]";
+/* At rest the prompt offers [search], a key like any other (theme.js adds it); the cursor
+   only appears once the box is clicked, since a blinking block reads as "type here". */
+[data-ber-search] {
   order: 1;
-  color: var(--ber-fg);
+  cursor: pointer;
+}
+
+.main-globalNav-searchInputWrapper:has(input:focus) [data-ber-search],
+.main-globalNav-searchInputWrapper:has(input:not(:placeholder-shown)) [data-ber-search] {
+  display: none !important;
 }
 
 .main-globalNav-searchInputWrapper input {

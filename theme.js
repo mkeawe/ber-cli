@@ -698,6 +698,16 @@
     const path = Spicetify.Platform.History.location?.pathname || location.pathname;
     const text = `${user.toLowerCase()}@spotify:${where(path)}$`;
     if (wrap.dataset.berPrompt !== text) wrap.dataset.berPrompt = text;
+    // At rest the box offers [search], a key like the others (hover, cursor); CSS hides it
+    // once the box is focused or holds text.
+    if (!wrap.querySelector("[data-ber-search]")) {
+      const key = document.createElement("button");
+      key.type = "button";
+      key.dataset.berSearch = "";
+      key.dataset.berWord = "[search]";
+      key.textContent = "[search]";
+      wrap.querySelector("input")?.before(key);
+    }
   }
 
   // The prompt and [search] are drawn beside the box, so a click on either lands in it.
