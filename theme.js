@@ -33,8 +33,8 @@
     m.set = (k, v) => { set(k, v); if (m.size > limit) m.delete(m.keys().next().value); return m; };
     return m;
   }
-  const pixels = bounded(48); // src -> Promise<HTMLImageElement | null>
-  const arts = bounded(400); // src|w|h -> Promise<dataURL | null>
+  const pixels = bounded(32); // src -> Promise<HTMLImageElement | null>
+  const arts = bounded(200); // src|w|h -> Promise<dataURL | null>
 
   function load(src) {
     if (!pixels.has(src)) {
@@ -57,6 +57,9 @@
   }
 
   const sampleCanvas = document.createElement("canvas");
+  // One output bitmap for every still cover: toBlob copies it at call time, so reuse is safe
+  // and no page load churns through hundreds of throwaway canvases.
+  const outCanvas = document.createElement("canvas");
 
   // Draws any picture source (image or video frame) as characters into `out`.
   // With `cover`, the source is cropped to the box the way object-fit: cover does.
@@ -122,11 +125,10 @@
       arts.set(key, load(readable(src)).then(idle).then((im) => {
         if (!im) return null;
         try {
-          const out = document.createElement("canvas");
-          paint(im, w, h, out);
+          paint(im, w, h, outCanvas);
           // Encoded off the main thread, so drawing many covers never stalls typing. A data
           // URL, not a blob URL: nothing to revoke, and it lives only as long as its element.
-          return new Promise((res) => out.toBlob((b) => {
+          return new Promise((res) => outCanvas.toBlob((b) => {
             if (!b) return res(null);
             const r = new FileReader();
             r.onload = () => res(r.result);
@@ -156,14 +158,34 @@
       x.beginPath();
       x.arc(w / 2, h / 2, Math.min(w, h) * 0.28, 0, Math.PI * 2);
       x.stroke();
-      const out = document.createElement("canvas");
-      paint(c, w, h, out);
-      rings.set(key, out.toDataURL());
+      paint(c, w, h, outCanvas);
+      rings.set(key, outCanvas.toDataURL());
     }
     return rings.get(key);
   }
 
   const drawn = new WeakMap(); // element -> key it was drawn for
+
+  // Finished drawings wait for the next frame and are written together: one style pass
+  // for a whole batch of covers instead of one per cover.
+  // Runs `fn` on the next frame, or on a short timer if no frame comes (a hidden window
+  // gets none), whichever is first. Returns a cancel function.
+  function nextFrame(fn, ms = 250) {
+    let frame = 0, timer = 0;
+    const go = () => { cancelAnimationFrame(frame); clearTimeout(timer); fn(); };
+    frame = requestAnimationFrame(go);
+    timer = setTimeout(go, ms);
+    return () => { cancelAnimationFrame(frame); clearTimeout(timer); };
+  }
+
+  const writes = [];
+  let writing = false;
+  function write(fn) {
+    writes.push(fn);
+    if (writing) return;
+    writing = true;
+    nextFrame(() => { writing = false; const w = writes.splice(0); for (const f of w) f(); });
+  }
 
   // Sizes come from the observers when they have them, so no image is measured twice.
   async function imgArt(img, sw, sh) {
@@ -180,9 +202,11 @@
     if (drawn.get(img) === key) return;
     drawn.set(img, key);
     let url = await art(src, w, h);
-    if (url) delete img.dataset.berRing; else { url = ring(w, h); img.dataset.berRing = ""; }
-    if ((img.currentSrc || img.src) !== src) return;
-    img.style.setProperty("content", `url(${url})`);
+    write(() => {
+      if ((img.currentSrc || img.src) !== src) return;
+      if (url) delete img.dataset.berRing; else { url = ring(w, h); img.dataset.berRing = ""; }
+      img.style.setProperty("content", `url(${url})`);
+    });
   }
 
   // Photographs set as backgrounds (artist headers, "About the artist").
@@ -197,9 +221,11 @@
     drawn.set(el, key);
     const url = await art(m[1], w, h);
     if (!url) return;
-    el.dataset.berArt = "";
-    el.style.setProperty("background-image", `url(${url})`, "important");
-    el.style.setProperty("background-size", "100% 100%", "important");
+    write(() => {
+      el.dataset.berArt = "";
+      el.style.setProperty("background-image", `url(${url})`, "important");
+      el.style.setProperty("background-size", "100% 100%", "important");
+    });
   }
 
   // Moving pictures drawn live as characters, ten frames a second: video (Canvas loops,
@@ -417,8 +443,7 @@
       x.fillStyle = "#000"; x.fillRect(0, 0, w, h);
       const s = Math.min(w, h) * 0.8;
       x.drawImage(im, (w - s) / 2, (h - s) / 2, s, s);
-      const out = document.createElement("canvas");
-      try { paint(src, w, h, out); } catch { return; }
+      try { paint(src, w, h, outCanvas); } catch { return; }
       box.dataset.berArt = "";
       box.dataset.berStand = "";
       // The placeholder squares around it (same size) lose their grey fill and edge.
@@ -427,7 +452,7 @@
         if (Math.abs(r.width - w) > 2 || Math.abs(r.height - h) > 2) break;
         a.dataset.berFrame = "";
       }
-      box.style.setProperty("background", `url(${out.toDataURL()}) center / 100% 100% no-repeat`, "important");
+      box.style.setProperty("background", `url(${outCanvas.toDataURL()}) center / 100% 100% no-repeat`, "important");
     };
     im.src = "data:image/svg+xml," + encodeURIComponent(new XMLSerializer().serializeToString(copy));
   }
@@ -446,7 +471,7 @@
   function syncHover() {
     if (syncing) return;
     syncing = true;
-    requestAnimationFrame(() => {
+    nextFrame(() => {
       syncing = false;
       for (const doc of docs) {
         doc.querySelectorAll(".main-playButton-PlayButton [data-ber-word]").forEach((b) => {
@@ -673,7 +698,7 @@
   const docs = new Set();
   const seen = new IntersectionObserver((entries) => {
     for (const e of entries) if (e.isIntersecting) imgArt(e.target, e.boundingClientRect.width, e.boundingClientRect.height);
-  }, { rootMargin: "300px" });
+  }, { rootMargin: "200px" });
   const sized = new ResizeObserver((entries) => {
     for (const e of entries) {
       if (!e.target.isConnected) continue;
@@ -764,7 +789,7 @@
       }
       if (added.size && !queued) {
         queued = true;
-        requestAnimationFrame(() => {
+        nextFrame(() => {
           queued = false;
           const roots = [...added].filter((n) => ![...added].some((m) => m !== n && m.contains(n)));
           added.clear();
@@ -851,14 +876,18 @@
       .observe(document.head, { childList: true });
     attach(document, true);
   });
-  // After a page change, the main view is checked again for colours handed down from artwork
-  // (cinema mode, headers). Search results are new nodes the observer already handles.
+  // After a page change, only the main view's elements that carry inline colour variables
+  // (cinema mode, headers) are judged again, with their subtrees: new nodes and later
+  // inline-style changes are already handled by the observer.
   let navT = 0;
   Spicetify.Platform.History.listen((loc) => {
     prompt();
     clearTimeout(navT);
     if ((loc?.pathname || "").startsWith("/search")) return;
-    navT = setTimeout(() => { const m = document.querySelector(".Root__main-view"); if (m) reflatten(m); }, 1500);
+    navT = setTimeout(() => {
+      const carriers = document.querySelectorAll('.Root__main-view [style*="--"]');
+      if (carriers.length) { carriers.forEach(reflatten); }
+    }, 1500);
   });
   window.addEventListener("resize", clearLights);
   clearLights();
