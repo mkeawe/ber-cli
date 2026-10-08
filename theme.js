@@ -151,7 +151,7 @@
       c.width = w; c.height = h;
       const x = c.getContext("2d");
       x.fillStyle = "#000"; x.fillRect(0, 0, w, h);
-      x.strokeStyle = css("--spice-button") || "#5fd75f";
+      x.strokeStyle = palette.signal;
       x.lineWidth = Math.max(4, Math.min(w, h) * 0.22);
       x.beginPath();
       x.arc(w / 2, h / 2, Math.min(w, h) * 0.28, 0, Math.PI * 2);
@@ -320,10 +320,7 @@
     const t = host.dataset.testid || "";
     if (/chevronStart|--start|button-start|Left|prev/i.test(c + t)) return "<";
     if (/chevronEnd|--end|button-end|Right|next/i.test(c + t)) return ">";
-    if (/carouselButton/.test(c)) {
-      const p = host.parentElement.getBoundingClientRect(), r = host.getBoundingClientRect();
-      return r.left + r.width / 2 < p.left + p.width / 2 ? "<" : ">";
-    }
+    if (/carouselButton/.test(c)) return host.previousElementSibling ? ">" : "<";
     if (/dj-button/.test(host.innerHTML)) return "dj";
     return "";
   }
@@ -372,22 +369,45 @@
     const pressed = host.getAttribute("aria-pressed") === "true" || host.getAttribute("aria-checked") === "true" ||
       host.getAttribute("aria-selected") === "true";
     if (on || pressed) host.dataset.berOn = ""; else delete host.dataset.berOn;
+    if (/Your Library$/.test(label)) {
+      const header = host.closest(".main-yourLibraryX-header");
+      if (header) { if (/^Open/.test(label)) header.dataset.berCollapsed = ""; else delete header.dataset.berCollapsed; }
+    }
   }
 
   // An icon standing in for a missing cover (Local Files, a playlist with no picture) is
   // drawn in characters, in the signal colour, filling the cover's square like any cover.
   // Where a cover lives: card and header image boxes, and the picture slot of a library row.
   const COVER_BOX = '[class*="imageContainer"], [class*="imageWrapper"], [class*="coverArt"], [class*="entityImage"], [class*="list-row__header-side"]';
-  function stand(svg) {
+  const standQueue = new Set();
+  function standAll() {
+    const todo = [...standQueue]; standQueue.clear();
+    const sized = [];
+    for (const svg of todo) {
+      if (!svg.isConnected) continue;
+      const box = svg.parentElement;
+      if (!box || box.dataset.berArt !== undefined || box.querySelector("img")) continue;
+      const b = box.getBoundingClientRect(), i = svg.getBoundingClientRect();
+      if (b.width < 40 || b.height < 40 || Math.abs(b.width - b.height) > 4 || i.width >= b.width * 0.9) continue;
+      sized.push([svg, box, Math.round(b.width), Math.round(b.height)]);
+    }
+    for (const [svg, box, w, h] of sized) stand(svg, box, w, h);
+  }
+
+  // Cheap check in the hot path: a plausible cover slot goes on the queue.
+  function standCandidate(svg) {
     const box = svg.parentElement;
     if (!box || box.dataset.berArt !== undefined || !box.closest(COVER_BOX) || box.querySelector("img")) return false;
-    const b = box.getBoundingClientRect(), i = svg.getBoundingClientRect();
-    if (b.width < 40 || b.height < 40 || Math.abs(b.width - b.height) > 4 || i.width >= b.width * 0.9) return false;
-    const w = Math.round(b.width), h = Math.round(b.height);
+    standQueue.add(svg);
+    svg.dataset.berHide = "";
+    return true;
+  }
+
+  function stand(svg, box, w, h) {
     const copy = svg.cloneNode(true);
     copy.setAttribute("xmlns", "http://www.w3.org/2000/svg");
     copy.setAttribute("width", 100); copy.setAttribute("height", 100);
-    copy.setAttribute("fill", css("--spice-button") || "#5fd75f");
+    copy.setAttribute("fill", palette.signal);
     copy.removeAttribute("class"); copy.removeAttribute("style");
     const im = new Image();
     im.onload = () => {
@@ -410,13 +430,11 @@
       box.style.setProperty("background", `url(${out.toDataURL()}) center / 100% 100% no-repeat`, "important");
     };
     im.src = "data:image/svg+xml," + encodeURIComponent(new XMLSerializer().serializeToString(copy));
-    svg.dataset.berHide = "";
-    return true;
   }
 
   function iconify(svg) {
     if (svg.closest("[data-ber-word], .ber-keep")) return;
-    if (stand(svg)) return;
+    if (standCandidate(svg)) return;
     const host = svg.closest(HOST);
     // A link that shows a picture (a cover) keeps the picture; only the icon goes.
     if (host && !(host.tagName === "A" && host.querySelector("img")) && (!shownText(host) || host.dataset.testid === "user-widget-link")) word(host, svg);
@@ -447,12 +465,16 @@
   const OWN_KEYS = ["main", "main-elevated", "highlight", "highlight-elevated", "sidebar", "player", "card",
     "misc", "text", "subtext", "button", "button-active", "tab-active", "notification", "notification-error"];
   let ownKey = "";
+  // The two colours the drawings use, read with the rest so drawing never asks the page.
+  const palette = { signal: "#5fd75f", row: "#171717" };
   const ownNow = () => OWN_KEYS.map((k) => css(`--spice-rgb-${k}`).replace(/\s/g, "")).filter(Boolean);
   function readOwn() {
     const vals = ownNow();
     own.clear();
     vals.forEach((v) => own.add(v));
     ownKey = vals.join("|");
+    palette.signal = css("--spice-button") || palette.signal;
+    palette.row = css("--spice-highlight") || palette.row;
   }
 
   // The scheme can be changed live (the Marketplace dropdown). When it is, everything judged
@@ -470,7 +492,7 @@
       doc.querySelectorAll("img[data-ber-ring]").forEach((img) => { drawn.delete(img); imgArt(img); });
       doc.querySelectorAll("[data-ber-stand]").forEach((box) => {
         delete box.dataset.berStand; delete box.dataset.berArt; box.style.removeProperty("background");
-        const svg = box.querySelector("svg"); if (svg) { delete svg.dataset.berHide; stand(svg); }
+        const svg = box.querySelector("svg"); if (svg) { delete svg.dataset.berHide; standCandidate(svg); }
       });
       reflatten(doc.body);
     }
@@ -540,7 +562,7 @@
     const size = getComputedStyle(el).backgroundSize;
     const [w, h] = /px/.test(size) ? size.split(" ").map(parseFloat) : [0, 0];
     if (!w || !h) { el.style.setProperty("background-image", "none", "important"); return; }
-    const c = css("--spice-highlight") || "#171717";
+    const c = palette.row;
     const art = Math.min(h - 16, 48);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">` +
       `<rect x="8" y="${(h - art) / 2}" width="${art}" height="${art}" fill="${c}"/>` +
@@ -549,20 +571,27 @@
     el.style.setProperty("background-image", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`, "important");
   }
 
-  // Elements (and, for roots, their subtrees) to judge again at the next frame.
+  // Elements (and, for roots, their subtrees) to judge for washes once the page is idle.
+  // Reading computed styles right after React writes would force an extra style pass per
+  // keystroke; at idle the pass has already happened for the paint, so the reads are free.
   const pending = new Set();
   const pendingRoots = new Set();
+  let idleHandle = 0;
   function schedule() {
-    if (pending.size || pendingRoots.size) return;
-    requestAnimationFrame(() => {
+    if (idleHandle) return;
+    const run = () => {
+      idleHandle = 0;
       const els = [...pending];
-      for (const root of pendingRoots) { els.push(root); for (const el of root.querySelectorAll("*")) els.push(el); }
+      for (const root of pendingRoots) { if (root.isConnected) { els.push(root); for (const el of root.querySelectorAll("*")) els.push(el); } }
       pending.clear(); pendingRoots.clear();
-      flattenAll(els);
-    });
+      flattenAll(els.filter((el) => el.isConnected));
+      standAll();
+      syncHover();
+    };
+    idleHandle = window.requestIdleCallback ? requestIdleCallback(run, { timeout: 400 }) : setTimeout(run, 100);
   }
-  function reflatten(root) { schedule(); pendingRoots.add(root); }
-  function recheck(el) { schedule(); pending.add(el); }
+  function reflatten(root) { pendingRoots.add(root); schedule(); }
+  function recheck(el) { pending.add(el); schedule(); }
 
   // ============================================================ text bars
 
@@ -661,6 +690,17 @@
     img.addEventListener("load", () => imgArt(img));
   }
 
+  // Markup hooks for what the stylesheet would otherwise need :has() to find.
+  function tagShelf(h2) {
+    const col = h2.parentElement, header = col.parentElement;
+    col.dataset.berShelfColumn = "";
+    if (header?.className.includes("list-row__header")) header.dataset.berShelf = "";
+  }
+  function tagFilters(area) {
+    const spacing = area.parentElement, row = spacing?.parentElement;
+    if (spacing?.className.includes("contentSpacing") && row?.tagName === "DIV") row.dataset.berFilters = "";
+  }
+
   function sweep(roots, lazy) {
     const els = [];
     for (const root of roots) {
@@ -668,15 +708,23 @@
       if (root.nodeType === 1) els.push(root);
       for (const el of root.querySelectorAll("*")) els.push(el);
     }
-    flattenAll(els);
+    let plays = false;
     for (const el of els) {
       switch (el.tagName) {
         case "svg": iconify(el); continue;
         case "VIDEO": case "CANVAS": moverArt(el); continue;
+        case "H2": if (el.parentElement?.className.includes("list-row__column")) tagShelf(el); continue;
       }
+      const cls = typeof el.className === "string" ? el.className : "";
+      if (cls.includes("main-watchFeed-contentWrapper")) el.parentElement.dataset.berMarquee = "";
+      else if (cls.includes("search-searchCategory-contentArea")) tagFilters(el);
+      else if (cls.includes("main-playButton-PlayButton")) plays = true;
       if (el.dataset?.separator !== undefined && el.textContent.trim() === "•") el.dataset.berDot = "";
       if (el.dataset?.testid === "user-widget-link" || /^(Open|Collapse) Your Library$/.test(el.getAttribute?.("aria-label") || "")) word(el);
     }
+    for (const root of roots) { if (root.isConnected) pendingRoots.add(root); }
+    schedule();
+    if (plays) syncHover();
     // Pictures last: they measure sizes, once, after the writes.
     for (const el of els) {
       if (el.tagName === "IMG") watchImg(el, lazy);
@@ -721,9 +769,9 @@
           const roots = [...added].filter((n) => ![...added].some((m) => m !== n && m.contains(n)));
           added.clear();
           sweep(roots, lazy);
-          syncHover();
-          // The search box is rebuilt on some navigations; its prompt is written back.
-          if (doc === document) prompt();
+          // The search box and nav are rebuilt on some navigations; the prompt is written
+          // back and [back] re-measured against the window buttons.
+          if (doc === document && roots.some((r) => r.querySelector?.('.main-globalNav-historyButtonsContainer, .main-globalNav-searchInputWrapper') || r.closest?.('.Root__globalNav'))) { prompt(); clearLights(); }
         });
       }
     }).observe(doc.body, {
@@ -787,10 +835,20 @@
   face().finally(() => {
     measure();
     readOwn();
-    // A scheme switch rewrites a style tag in the page head; check only then.
+    // A scheme switch rewrites the Marketplace's scheme style tag; only that is watched,
+    // not the whole head (Spotify's own style tags change on every render).
     let pend = 0;
-    new MutationObserver(() => { clearTimeout(pend); pend = setTimeout(schemeWatch, 300); })
-      .observe(document.head, { childList: true, subtree: true, characterData: true });
+    const later = () => { clearTimeout(pend); pend = setTimeout(schemeWatch, 300); };
+    const watchScheme = () => {
+      const tag = document.querySelector("style.marketplaceScheme");
+      if (tag && !tag.dataset.berWatched) {
+        tag.dataset.berWatched = "";
+        new MutationObserver(later).observe(tag, { childList: true, characterData: true, subtree: true });
+      }
+    };
+    watchScheme();
+    new MutationObserver((recs) => { if (recs.some((r) => [...r.addedNodes].some((n) => n.nodeType === 1 && (n.classList?.contains("marketplaceScheme") || n.tagName === "LINK")))) { watchScheme(); later(); } })
+      .observe(document.head, { childList: true });
     attach(document, true);
   });
   // After a page change, the main view is checked again for colours handed down from artwork
@@ -803,8 +861,8 @@
     navT = setTimeout(() => { const m = document.querySelector(".Root__main-view"); if (m) reflatten(m); }, 1500);
   });
   window.addEventListener("resize", clearLights);
-  setInterval(clearLights, 2000);
   clearLights();
+  setInterval(syncHover, 4000);
   Spicetify.Player.addEventListener("onprogress", bars);
   setInterval(bars, 500);
   prompt();

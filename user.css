@@ -71,7 +71,7 @@ body, button, input, textarea, select {
   font-synthesis: none !important;
 }
 
-body *:not(svg):not(svg *):not(canvas) {
+body *:not(canvas) {
   font-family: var(--ber-face) !important;
   font-size: var(--ber-size) !important;
 }
@@ -221,9 +221,7 @@ canvas.ber-video {
   --essential-base: var(--ber-bg);
 }
 
-*,
-*::before,
-*::after {
+* {
   border-radius: 0 !important;
   box-shadow: none !important;
   text-shadow: none !important;
@@ -927,7 +925,7 @@ button[data-testid="play-button"][data-ber-word],
 
 /* Long titles and artist lists don't slide sideways under a fade: they stop, and a line
    that doesn't fit ends in an ellipsis, as a terminal would print it. */
-:has(> .main-watchFeed-contentWrapper) {
+[data-ber-marquee] {
   mask-image: none !important;
   -webkit-mask-image: none !important;
   max-width: 100%;
@@ -987,15 +985,16 @@ button[data-testid="play-button"][data-ber-word],
 
 /* ----------------------------------------------------------- collapsed library */
 
-/* Collapsed, the library is a narrow column: its keys sit centred in it. */
-.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
-.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) * {
+/* Collapsed (theme.js marks the header), the library is a narrow column: its keys sit
+   centred in it. */
+.main-yourLibraryX-header[data-ber-collapsed],
+.main-yourLibraryX-header[data-ber-collapsed] * {
   padding-inline: 0 !important;
   margin-inline: 0 !important;
 }
 
-.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
-.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) div {
+.main-yourLibraryX-header[data-ber-collapsed],
+.main-yourLibraryX-header[data-ber-collapsed] div {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -1003,7 +1002,7 @@ button[data-testid="play-button"][data-ber-word],
   width: 100% !important;
 }
 
-.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) [data-ber-word] {
+.main-yourLibraryX-header[data-ber-collapsed] [data-ber-word] {
   padding-inline: 0.5ch !important;
 }
 
@@ -1100,23 +1099,23 @@ button[data-testid="play-button"][data-ber-word],
 
 /* ----------------------------------------------------------- home filters */
 
-/* The All / Music / Podcasts / Audiobooks row is the page's first line:
+/* The All / Music / Podcasts / Audiobooks row (marked by theme.js) is the page's first line:
    it stays where it is and scrolls away with the page, no sticking, no scroll effects. */
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) {
+[data-ber-filters] {
   position: static !important;
   top: auto !important;
 }
 
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea),
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) > div {
+[data-ber-filters],
+[data-ber-filters] > div {
   background: var(--ber-bg) !important;
   background-image: none !important;
   opacity: 1 !important;
 }
 
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *,
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::before,
-div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::after {
+[data-ber-filters] *,
+[data-ber-filters] *::before,
+[data-ber-filters] *::after {
   animation: none !important;
   transition: none !important;
 }
@@ -1164,13 +1163,13 @@ div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::aft
   white-space: pre;
 }
 
-/* A shelf's subtitle and title sit on one line: "# Made For you". */
-[class*="list-row__header"]:has(> [class*="list-row__column"] > h2) {
+/* A shelf's subtitle and title sit on one line: "# Made For you" (theme.js marks the header). */
+[data-ber-shelf] {
   flex-wrap: nowrap !important;
   align-items: center !important;
 }
 
-[class*="list-row__header"] > [class*="list-row__column"]:has(> h2) {
+[data-ber-shelf-column] {
   flex: 1 1 auto !important;
   min-width: 0;
   flex-direction: row !important;
@@ -1180,12 +1179,12 @@ div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::aft
   gap: 1ch;
 }
 
-[class*="list-row__header"] > [class*="list-row__column"]:has(> h2)::before {
+[data-ber-shelf-column]::before {
   content: "#";
   color: var(--ber-dim);
 }
 
-[class*="list-row__header"] > [class*="list-row__column"]:has(> h2) > p {
+[data-ber-shelf-column] > p {
   margin: 0 !important;
   white-space: nowrap;
 }
