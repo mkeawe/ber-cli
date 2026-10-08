@@ -1,0 +1,13 @@
+[
+  {
+    "name": "ber-cli",
+    "description": "Spotify as a terminal, set in Departure Mono. Covers drawn in characters, every icon a word, one size, grey on black, one signal colour.",
+    "preview": "preview.png",
+    "readme": "README.md",
+    "usercss": "user.css",
+    "schemes": "color.ini",
+    "include": ["https://raw.githubusercontent.com/mkeawe/ber-cli/main/theme.js"],
+    "authors": [{ "name": "Micah Keawe", "url": "https://github.com/mkeawe" }],
+    "tags": ["dark", "minimal", "monospace", "terminal", "ascii"]
+  }
+]

@@ -1,0 +1,898 @@
+/*
+  ber-cli — Spotify as a terminal, set in Departure Mono.
+
+  What must always be true:
+  one face, one size, grey on black, square boxes, one signal colour.
+  The only other colour on screen is the music's own artwork.
+*/
+
+/* ------------------------------------------------------------------ face */
+
+/* Departure Mono by Helena Zhang (SIL OFL 1.1), bundled in assets/fonts with its licence.
+   One weight: headings stay the same weight, as a terminal's would. When the theme is
+   installed from the Marketplace, theme.js loads the same file from the repo instead. */
+@font-face {
+  font-family: "ber";
+  font-weight: 100 1000;
+  font-style: normal;
+  src: local("DepartureMono-Regular"), url("fonts/DepartureMono-Regular.woff2") format("woff2");
+}
+
+:root,
+:root .spotify-mix-non-latin {
+  --ber-face: "ber", "Departure Mono", Menlo, var(--fallback-fonts, monospace);
+  --encore-body-font-stack: var(--ber-face) !important;
+  --encore-title-font-stack: var(--ber-face) !important;
+  --encore-variable-font-stack: var(--ber-face) !important;
+  --encore-bodyMono-font-stack: var(--ber-face) !important;
+  --encore-text-font-family: var(--ber-face) !important;
+}
+
+body, button, input, textarea, select {
+  font-family: var(--ber-face);
+}
+
+/* A terminal has one size. Headings are bold, not bigger. */
+:root,
+.encore-layout-themes,
+.encore-small-devices-theme {
+  --ber-size: 14px;
+  --encore-text-size-smaller-3: var(--ber-size) !important;
+  --encore-text-size-smaller-2: var(--ber-size) !important;
+  --encore-text-size-smaller: var(--ber-size) !important;
+  --encore-text-size-base: var(--ber-size) !important;
+  --encore-text-size-large: var(--ber-size) !important;
+  --encore-text-size-larger: var(--ber-size) !important;
+  --encore-text-size-larger-2: var(--ber-size) !important;
+  --encore-text-size-larger-3: var(--ber-size) !important;
+  --encore-text-size-larger-4: var(--ber-size) !important;
+  --encore-text-size-larger-5: var(--ber-size) !important;
+}
+
+/* Spotify sizes page titles inline to fit; a terminal does not. */
+[class*="encore-text-headline"],
+[class*="encore-text-title"],
+.main-entityHeader-title h1,
+.main-entityHeader-title span {
+  font-size: var(--ber-size) !important;
+  line-height: 1.5 !important;
+}
+
+* {
+  letter-spacing: normal !important;
+  font-feature-settings: normal;
+  font-synthesis: none !important;
+}
+
+body *:not(svg):not(svg *):not(canvas) {
+  font-family: var(--ber-face) !important;
+  font-size: var(--ber-size) !important;
+}
+
+/* Inputs are lines to type on. */
+:where(input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  background: transparent !important;
+  border: 1px solid var(--ber-box) !important;
+  color: var(--ber-fg) !important;
+}
+
+/* The search box's keyboard-shortcut hint. */
+.main-globalNav-searchInputKBDWrapper {
+  display: none !important;
+}
+
+/* Live video drawn as characters by theme.js sits over the hidden original. */
+video[data-ber-drawn] {
+  opacity: 0 !important;
+}
+
+canvas.ber-video {
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------------- tokens */
+
+:root {
+  --ber-bg: var(--spice-main);
+  --ber-fg: var(--spice-text);
+  --ber-dim: var(--spice-subtext);
+  --ber-row: var(--spice-highlight);
+  --ber-box: var(--spice-misc);
+  --ber-signal: var(--spice-button);
+}
+
+/* The screen: grey on black. Spotify's accents become the signal. */
+.encore-dark-theme,
+.encore-dark-theme .encore-base-set,
+.encore-dark-theme .encore-app-frame-set,
+.encore-dark-theme .encore-announcement-subdued-set,
+.encore-dark-theme .encore-negative-subdued-set,
+.encore-dark-theme .encore-positive-subdued-set,
+.encore-dark-theme .encore-warning-subdued-set {
+  --background-base: var(--ber-bg);
+  --background-highlight: var(--ber-row);
+  --background-press: var(--ber-box);
+  --background-elevated-base: var(--ber-bg);
+  --background-elevated-highlight: var(--ber-row);
+  --background-elevated-press: var(--ber-box);
+  --background-tinted-base: var(--ber-bg);
+  --background-tinted-highlight: var(--ber-row);
+  --background-tinted-press: var(--ber-box);
+  --background-noise: var(--ber-bg);
+  --text-base: var(--ber-fg);
+  --text-subdued: var(--ber-dim);
+  --text-bright-accent: var(--ber-signal);
+  --text-negative: var(--spice-notification-error);
+  --text-warning: var(--ber-signal);
+  --text-positive: var(--ber-signal);
+  --text-announcement: var(--ber-fg);
+  --essential-base: var(--ber-fg);
+  --essential-subdued: var(--ber-dim);
+  --essential-bright-accent: var(--ber-signal);
+  --essential-negative: var(--spice-notification-error);
+  --essential-warning: var(--ber-signal);
+  --essential-positive: var(--ber-signal);
+  --essential-announcement: var(--ber-fg);
+  --decorative-base: var(--ber-fg);
+  --decorative-subdued: var(--ber-box);
+}
+
+/* Filled accent things (the play key, toggles, toasts) are signal blocks with black text. */
+.encore-dark-theme .encore-bright-accent-set,
+.encore-dark-theme .encore-positive-set,
+.encore-dark-theme .encore-muted-accent-set,
+.encore-dark-theme .encore-warning-set,
+.encore-dark-theme .encore-announcement-set {
+  --background-base: var(--ber-signal);
+  --background-highlight: var(--ber-signal);
+  --background-press: var(--ber-signal);
+  --background-elevated-base: var(--ber-signal);
+  --background-elevated-highlight: var(--ber-signal);
+  --background-elevated-press: var(--ber-signal);
+  --background-tinted-base: var(--ber-signal);
+  --background-tinted-highlight: var(--ber-signal);
+  --background-tinted-press: var(--ber-signal);
+  --text-base: var(--ber-bg);
+  --text-subdued: var(--ber-bg);
+  --text-bright-accent: var(--ber-bg);
+  --text-negative: var(--ber-bg);
+  --text-warning: var(--ber-bg);
+  --text-positive: var(--ber-bg);
+  --text-announcement: var(--ber-bg);
+  --essential-base: var(--ber-bg);
+  --essential-subdued: var(--ber-bg);
+  --essential-bright-accent: var(--ber-bg);
+  --essential-negative: var(--ber-bg);
+  --essential-warning: var(--ber-bg);
+  --essential-positive: var(--ber-bg);
+  --essential-announcement: var(--ber-bg);
+  --decorative-base: var(--ber-bg);
+  --decorative-subdued: var(--ber-bg);
+}
+
+/* Inverted things are reverse video: black on grey. */
+.encore-dark-theme .encore-inverted-set,
+.encore-dark-theme .encore-inverted-dark-set,
+.encore-dark-theme .encore-inverted-light-set {
+  --background-base: var(--ber-fg);
+  --background-highlight: var(--ber-fg);
+  --background-press: var(--ber-dim);
+  --background-elevated-base: var(--ber-fg);
+  --background-elevated-highlight: var(--ber-fg);
+  --background-elevated-press: var(--ber-dim);
+  --background-tinted-base: var(--ber-fg);
+  --background-tinted-highlight: var(--ber-fg);
+  --background-tinted-press: var(--ber-dim);
+  --text-base: var(--ber-bg);
+  --text-subdued: var(--ber-bg);
+  --text-bright-accent: var(--ber-bg);
+  --essential-base: var(--ber-bg);
+  --essential-subdued: var(--ber-bg);
+  --essential-bright-accent: var(--ber-bg);
+  --decorative-base: var(--ber-bg);
+  --decorative-subdued: var(--ber-dim);
+}
+
+.encore-dark-theme .encore-negative-set {
+  --background-base: var(--spice-notification-error);
+  --background-highlight: var(--spice-notification-error);
+  --background-elevated-base: var(--spice-notification-error);
+  --text-base: var(--ber-bg);
+  --text-subdued: var(--ber-bg);
+  --essential-base: var(--ber-bg);
+}
+
+/* Everything square: panes, keys, chips, covers, artists. */
+:root,
+.encore-layout-themes,
+.encore-small-devices-theme {
+  --encore-corner-radius-smaller: 0 !important;
+  --encore-corner-radius-base: 0 !important;
+  --encore-corner-radius-larger: 0 !important;
+  --encore-list-row-border-radius: 0 !important;
+  --encore-button-corner-radius: 0 !important;
+  --encore-border-radius-rounded: 0 !important;
+  --encore-image-border-radius: 0 !important;
+}
+
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* ----------------------------------------------------------- panes */
+
+/* Black screen; each pane is a box, like tmux. */
+.Root__top-container,
+.Root__globalNav {
+  background-color: var(--ber-bg) !important;
+}
+
+.Root__nav-bar,
+.Root__main-view,
+.Root__right-sidebar,
+.Root__now-playing-bar {
+  background-color: var(--ber-bg) !important;
+  position: relative;
+}
+
+/* The box is drawn over the pane, so scrolling content never hides it. */
+.Root__nav-bar::after,
+.Root__main-view::after,
+.Root__right-sidebar::after,
+.Root__now-playing-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--ber-box);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* No colour washes taken from the artwork; no gradients. */
+.main-home-homeHeader,
+.main-entityHeader-backgroundColor,
+.main-entityHeader-overlay,
+.main-actionBarBackground-background,
+.main-topBar-background,
+.main-topBar-overlay,
+.x-entityHeader-overlay,
+.x-actionBarBackground-background,
+.main-rootlist-rootlistDividerGradient {
+  background: var(--ber-bg) !important;
+  background-image: none !important;
+}
+
+/* theme.js marks what Spotify paints from the artwork as it appears:
+   gradients go (data-ber-flat), coloured boxes become outlined boxes (data-ber-tint). */
+[data-ber-flat] {
+  background-image: none !important;
+  background-color: transparent !important;
+}
+
+[data-ber-word][data-ber-tint] {
+  outline: none !important;
+}
+
+[data-ber-tint] {
+  background-color: transparent !important;
+  background-image: none !important;
+  outline: 1px solid var(--ber-box);
+  outline-offset: -1px;
+}
+
+[data-ber-flat-pseudo]::before,
+[data-ber-flat-pseudo]::after {
+  background: none !important;
+}
+
+/* Some views (cinema mode, artist and playlist headers) re-theme every colour token
+   inline from the artwork. Pinned back to the screen's. */
+[style*="--background-base"],
+[style*="--text-base"],
+[style*="--essential-base"] {
+  --background-base: var(--ber-bg) !important;
+  --background-base-min-contrast: var(--ber-bg) !important;
+  --background-base-high-contrast: var(--ber-bg) !important;
+  --background-highlight: var(--ber-row) !important;
+  --background-press: var(--ber-box) !important;
+  --background-elevated-base: var(--ber-bg) !important;
+  --background-elevated-highlight: var(--ber-row) !important;
+  --background-elevated-press: var(--ber-box) !important;
+  --background-tinted-base: var(--ber-bg) !important;
+  --background-tinted-highlight: var(--ber-row) !important;
+  --background-tinted-press: var(--ber-box) !important;
+  --text-base: var(--ber-fg) !important;
+  --text-subdued: var(--ber-dim) !important;
+  --text-bright-accent: var(--ber-signal) !important;
+  --text-negative: var(--ber-fg) !important;
+  --text-warning: var(--ber-fg) !important;
+  --text-positive: var(--ber-signal) !important;
+  --text-announcement: var(--ber-fg) !important;
+  --essential-base: var(--ber-fg) !important;
+  --essential-subdued: var(--ber-dim) !important;
+  --essential-bright-accent: var(--ber-signal) !important;
+  --essential-negative: var(--ber-fg) !important;
+  --essential-warning: var(--ber-fg) !important;
+  --essential-positive: var(--ber-signal) !important;
+  --essential-announcement: var(--ber-fg) !important;
+  --decorative-base: var(--ber-fg) !important;
+  --decorative-subdued: var(--ber-box) !important;
+}
+
+/* The miniplayer window: black, and no blurred copy of the cover behind it. */
+html.ber-mini,
+.ber-mini body,
+.ber-mini .encore-dark-theme {
+  background: var(--ber-bg) !important;
+}
+
+.ber-mini [data-ber-word] {
+  background: var(--ber-bg) !important;
+  padding-inline: 0.25ch !important;
+}
+
+/* Too narrow for everything: copy-link lives in the main window. */
+.ber-mini [aria-label^="Copy link"] {
+  display: none !important;
+}
+
+[style*="--background-image-url"] {
+  --background-image-url: none !important;
+  background-image: none !important;
+}
+
+/* Colour variables Spotify hands down from the artwork. */
+[style*="--cinema-mode-bg-color"],
+[style*="--bg-color-from"],
+[style*="--extracted"] {
+  --cinema-mode-bg-color-from: var(--ber-bg) !important;
+  --cinema-mode-bg-color-to: var(--ber-bg) !important;
+  --bg-color-from: var(--ber-bg) !important;
+  --bg-color-to: var(--ber-bg) !important;
+  --extracted-entity-color: var(--ber-bg) !important;
+  --background-color: var(--ber-bg) !important;
+}
+
+/* Spotify paints these from the artwork with inline styles. */
+.Root__main-view [style*="background-color"]:not(img),
+.Root__right-sidebar [style*="background-color"]:not(img) {
+  background-color: var(--ber-bg) !important;
+}
+
+/* Words laid over a picture get a black ground of their own, as a terminal would print them. */
+.main-entityHeader-headerText > *,
+.main-entityHeader-headerText span,
+.main-entityHeader-headerText h1 {
+  background: var(--ber-bg) !important;
+  width: fit-content;
+  padding-inline: 0.5ch;
+}
+
+/* Page headers: no darkening gradient behind the title. Artist photos stay. */
+.main-entityHeader-container div:not(.main-entityHeader-background) {
+  background-image: none !important;
+}
+
+/* The column header that sticks while a list scrolls: no grey band. */
+.main-trackList-trackListHeader,
+.main-trackList-trackListHeaderStuck,
+[class*="trackListHeader"] {
+  background: var(--ber-bg) !important;
+}
+
+/* Image frames tinted from the artwork go clear. */
+[style*="--extracted-entity-color"],
+[style*="--extracted-entity-color"]::before,
+[style*="--extracted-entity-color"]::after,
+.x-entityImage-imageContainer,
+.x-entityImage-imageContainer::before,
+.x-entityImage-imageContainer::after {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* An image not yet loaded is empty space, not a guess at its colour. */
+.main-cardImage-imageWrapper {
+  background-color: transparent !important;
+}
+
+/* No fades at the edge of a shelf; a cut-off card already says there is more. */
+.search-searchCategory-contentArea::before,
+.search-searchCategory-contentArea::after {
+  background: none !important;
+}
+
+/* The home shortcuts' hover layer: clear at rest, a row highlight on hover. */
+[data-testid="shortcut-background"] {
+  background: transparent !important;
+}
+
+/* Canvas (the looping video) is drawn live in characters by theme.js; the shading Spotify
+   lays over it goes. If a Canvas cannot be read, the still cover art shows instead. */
+.main-nowPlayingView-canvasVisualEnhancement::before,
+.main-nowPlayingView-canvasVisualEnhancement::after,
+.main-nowPlayingView-contextItemInfo::before {
+  display: none !important;
+}
+
+[data-ber-no-canvas] .canvasVideoContainerNPV {
+  display: none !important;
+}
+
+[data-ber-no-canvas] .main-nowPlayingView-coverArtVisualEnhancement,
+[data-ber-no-canvas] .main-nowPlayingView-coverArtVisualEnhancement * {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Menus, dialogs and tooltips are boxes drawn over the screen. */
+.main-contextMenu-menu,
+[role="menu"],
+[role="dialog"],
+[role="tooltip"],
+.GenericModal {
+  background-color: var(--ber-bg) !important;
+  border: 1px solid var(--ber-dim) !important;
+}
+
+/* ----------------------------------------------------------- text */
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
+}
+
+/* Selection is reverse video. */
+::selection {
+  background: var(--ber-fg);
+  color: var(--ber-bg);
+}
+
+/* Keyboard focus marks the thing you can act on, never a whole pane. */
+:focus-visible {
+  outline: none !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[role="row"]:focus-visible,
+[role="option"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="button"]:focus-visible,
+[role="menuitem"]:focus-visible {
+  outline: 1px solid var(--ber-signal) !important;
+  outline-offset: 0 !important;
+}
+
+/* A selected row is reverse video too. */
+[aria-selected="true"] > .main-trackList-trackListRow,
+.main-trackList-trackListRow.main-trackList-selected {
+  background: var(--ber-fg) !important;
+}
+
+[aria-selected="true"] > .main-trackList-trackListRow *,
+.main-trackList-trackListRow.main-trackList-selected * {
+  color: var(--ber-bg) !important;
+  fill: var(--ber-bg) !important;
+}
+
+/* ----------------------------------------------------------- switches */
+
+/* Settings switches read as [on] / [off]. */
+.x-toggle-indicatorWrapper {
+  display: none !important;
+}
+
+.x-toggle-wrapper::after {
+  content: "[off]";
+  color: var(--ber-dim);
+}
+
+.x-toggle-wrapper:has(.x-toggle-input:checked)::after {
+  content: "[on]";
+  color: var(--ber-signal);
+}
+
+/* ----------------------------------------------------------- input */
+
+input,
+textarea {
+  caret-color: var(--ber-signal);
+  caret-shape: block;
+}
+
+/* ----------------------------------------------------------- playback */
+
+.progress-bar {
+  --bg-color: var(--ber-box) !important;
+  --mg-color: var(--ber-dim) !important;
+  --fg-color: var(--ber-fg) !important;
+  --is-active-fg-color: var(--ber-signal) !important;
+  --progress-bar-radius: 0 !important;
+}
+
+/* Lyrics: the line being sung in the signal colour, the rest dim. */
+.lyrics-lyrics-background,
+.lyrics-lyrics-container,
+[data-testid="fullscreen-lyric"],
+[style*="--lyrics-color"] {
+  --lyrics-color-background: var(--ber-bg) !important;
+  --lyrics-color-active: var(--ber-signal) !important;
+  --lyrics-color-inactive: var(--ber-dim) !important;
+  --lyrics-color-passed: var(--ber-fg) !important;
+}
+
+.lyrics-lyrics-background,
+[data-testid="lyrics-npv-section"] {
+  background: var(--ber-bg) !important;
+}
+
+
+
+/* ================================================================
+   Further: as little of Spotify as possible.
+   ================================================================ */
+
+/* ----------------------------------------------------------- covers */
+
+/* theme.js redraws every cover as coloured characters. Until it has,
+   and wherever it cannot read one, the picture stays dark and grey. */
+img:not([style*="content"]) {
+  filter: grayscale(1) brightness(0.35);
+}
+
+img[style*="content"] {
+  opacity: 1 !important;
+}
+
+img.ber-unreadable {
+  filter: grayscale(1) contrast(1.2);
+}
+
+/* `ls` does not show thumbnails. */
+.main-trackList-trackListRow img {
+  display: none !important;
+}
+
+/* No photographs painted behind things. */
+.Root__main-view [style*="url("],
+.Root__right-sidebar [style*="url("] {
+  background-image: none !important;
+}
+
+/* ----------------------------------------------------------- icons become words */
+
+/* theme.js gives every icon-only control a word (data-ber-word); the icon goes.
+   Decorative icons beside words that already say it are hidden (data-ber-hide). */
+[data-ber-hide],
+[data-ber-word] svg,
+[data-ber-word] span:has(> svg),
+[data-ber-word] > :not(.ber-keep):not(.ber-bar) {
+  display: none !important;
+}
+
+[data-ber-word]::after,
+[data-ber-word]:hover::after,
+[data-ber-word][aria-pressed="true"]::after,
+[data-ber-word][aria-checked="true"]::after {
+  content: attr(data-ber-word) !important;
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  width: auto !important;
+  height: auto !important;
+  background: none !important;
+  font-family: var(--ber-face) !important;
+  font-size: var(--ber-size) !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  white-space: pre !important;
+  color: inherit !important;
+  opacity: 1 !important;
+  display: inline !important;
+}
+
+[data-ber-word]::before {
+  content: none !important;
+}
+
+[data-ber-word] {
+  display: inline-flex !important;
+  align-items: center;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  inline-size: auto !important;
+  block-size: auto !important;
+  padding: 0.25em 0.5ch !important;
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--ber-fg) !important;
+  text-decoration: none !important;
+}
+
+[data-ber-word][data-ber-away]::after {
+  visibility: hidden;
+}
+
+[data-ber-word]:hover {
+  background: var(--ber-fg) !important;
+  color: var(--ber-bg) !important;
+}
+
+[data-ber-word]:disabled,
+[data-ber-word][aria-disabled="true"] {
+  color: var(--ber-dim) !important;
+}
+
+/* A switched-on control is the signal colour. */
+[data-ber-word][data-ber-on] {
+  color: var(--ber-signal) !important;
+}
+
+/* The page's play key: the one filled block. */
+button[data-testid="play-button"][data-ber-word],
+[data-testid="action-bar-row"] .main-playButton-PlayButton [data-ber-word] {
+  background: var(--ber-signal) !important;
+  color: var(--ber-bg) !important;
+}
+
+/* A filled text button ("Start a Jam", "Save") is a bracketed command in the signal colour. */
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"]) {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+}
+
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"]),
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"]) > span {
+  background: transparent !important;
+  color: var(--ber-signal) !important;
+  border: 0 !important;
+  padding-inline: 0 !important;
+  min-block-size: 0 !important;
+}
+
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"])::before { content: "["; color: var(--ber-signal); }
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"])::after { content: "]"; color: var(--ber-signal); }
+
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"]):hover,
+[data-encore-id="buttonPrimary"]:not([data-ber-word]):not([data-testid="play-button"]):hover > span {
+  background: var(--ber-signal) !important;
+  color: var(--ber-bg) !important;
+}
+
+/* Text buttons ("Follow", "See more", sort menus) read as bracketed commands, not pills. */
+[data-encore-id="buttonSecondary"]:not([data-ber-word]),
+[data-encore-id="buttonTertiary"]:not([data-ber-word]) {
+  border: 0 !important;
+  background: transparent !important;
+  padding-inline: 0.5ch !important;
+}
+
+[data-encore-id="buttonSecondary"]:not([data-ber-word])::before,
+[data-encore-id="buttonTertiary"]:not([data-ber-word]):not(:empty)::before { content: "["; }
+[data-encore-id="buttonSecondary"]:not([data-ber-word])::after,
+[data-encore-id="buttonTertiary"]:not([data-ber-word]):not(:empty)::after { content: "]"; }
+
+[data-encore-id="buttonSecondary"]:not([data-ber-word]):hover,
+[data-encore-id="buttonTertiary"]:not([data-ber-word]):hover {
+  background: var(--ber-fg) !important;
+  color: var(--ber-bg) !important;
+}
+
+/* A ticked menu item says so in text. */
+[role="menuitemradio"][aria-checked="true"]::before,
+[role="menuitemcheckbox"][aria-checked="true"]::before,
+[role="menuitem"][aria-checked="true"]::before {
+  content: "* ";
+  color: var(--ber-signal);
+}
+
+/* The search box's magnifier and the rule beside it go; the prompt replaces them. */
+.Root__globalNav button[aria-label="Search"],
+.Root__globalNav [class*="divider" i],
+.main-globalNav-searchSection hr {
+  display: none !important;
+}
+
+/* Cover-art buttons in the player go; a status line has no pictures. */
+[data-testid="cover-art-button"],
+.main-nowPlayingWidget-coverArtContainer {
+  display: none !important;
+}
+
+/* ----------------------------------------------------------- status line */
+
+/* The player is a status line along the bottom. */
+.Root__now-playing-bar,
+.Root__now-playing-bar * {
+  color: var(--ber-fg);
+}
+
+/* ----------------------------------------------------------- text bars */
+
+/* theme.js writes the bars; Spotify's own sliders stay, invisible, to take the clicks. */
+[data-testid="playback-progressbar"],
+.volume-bar__slider-container {
+  position: relative;
+}
+
+[data-testid="playback-progressbar"] .progress-bar,
+.volume-bar__slider-container .progress-bar {
+  opacity: 0 !important;
+  position: relative;
+  z-index: 1;
+}
+
+.ber-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--ber-face);
+  font-size: var(--ber-size);
+  line-height: 1;
+  white-space: pre;
+  overflow: hidden;
+  color: var(--ber-fg);
+  pointer-events: none;
+}
+
+/* ----------------------------------------------------------- window */
+
+/* [back] starts clear of the window's close / minimise / zoom buttons.
+   theme.js measures the shift, since Spotify zooms and the window buttons do not. */
+.main-globalNav-historyButtonsContainer {
+  margin-inline-start: var(--ber-lights-shift, 0px) !important;
+}
+
+/* ----------------------------------------------------------- prompt */
+
+.main-globalNav-searchInputSection {
+  width: min(760px, 56vw) !important;
+  max-width: none !important;
+}
+
+.main-globalNav-searchInputSection form {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.main-globalNav-searchInputWrapper {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.main-globalNav-searchInputWrapper::before {
+  content: attr(data-ber-prompt) " ";
+  order: 0;
+  white-space: pre;
+  color: var(--ber-signal);
+  font-size: var(--ber-size);
+  flex: none;
+}
+
+.main-globalNav-searchInputWrapper:has(input:placeholder-shown:not(:focus))::after {
+  content: "█";
+  order: 1;
+  color: var(--ber-fg);
+  animation: ber-blink 1s steps(1) infinite;
+}
+
+.main-globalNav-searchInputWrapper input {
+  order: 2;
+  flex: 1;
+  padding-inline: 0 9ch !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  font-size: var(--ber-size) !important;
+}
+
+.main-globalNav-searchInputWrapper input::placeholder {
+  color: transparent !important;
+}
+
+.main-globalNav-searchInputWrapper form > div:has(svg),
+.main-globalNav-searchInputWrapper [class*="form-input-icon"] > svg {
+  display: none !important;
+}
+
+@keyframes ber-blink {
+  50% { opacity: 0; }
+}
+
+/* ----------------------------------------------------------- home filters */
+
+/* The All / Music / Podcasts / Audiobooks row is the page's first line:
+   it stays where it is and scrolls away with the page, no sticking, no scroll effects. */
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) {
+  position: static !important;
+  top: auto !important;
+}
+
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea),
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) > div {
+  background: var(--ber-bg) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *,
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::before,
+div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Filter chips: plain words; the chosen one is reverse video. */
+[class*="legacy-chip__inner"] {
+  background: transparent !important;
+  color: var(--ber-fg) !important;
+  transform: none !important;
+}
+
+[aria-checked="true"] > [class*="legacy-chip__inner"],
+[aria-checked="true"] [class*="legacy-chip__inner"] {
+  background: var(--ber-fg) !important;
+  color: var(--ber-bg) !important;
+}
+
+/* ----------------------------------------------------------- headings */
+
+/* Shelf headings read as comments. */
+[class*="list-row__header"] h2 {
+  display: flex !important;
+  white-space: pre;
+}
+
+/* A shelf's subtitle and title sit on one line: "# Made For micah". */
+[class*="list-row__header"]:has(> [class*="list-row__column"] > h2) {
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+}
+
+[class*="list-row__header"] > [class*="list-row__column"]:has(> h2) {
+  flex: 1 1 auto !important;
+  min-width: 0;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  align-self: stretch !important;
+  gap: 1ch;
+}
+
+[class*="list-row__header"] > [class*="list-row__column"]:has(> h2)::before {
+  content: "#";
+  color: var(--ber-dim);
+}
+
+[class*="list-row__header"] > [class*="list-row__column"]:has(> h2) > p {
+  margin: 0 !important;
+  white-space: nowrap;
+}
+
+[class*="list-row__slot"] a {
+  color: var(--ber-dim) !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+[class*="list-row__slot"] a::before { content: "["; }
+[class*="list-row__slot"] a::after { content: "]"; }
+
+/* ----------------------------------------------------------- scrollbars */
+
+/* A terminal has none. */
+::-webkit-scrollbar { display: none; }
