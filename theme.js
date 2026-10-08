@@ -178,38 +178,60 @@
     el.style.setProperty("background-size", "100% 100%", "important");
   }
 
-  // Video (Canvas loops, music videos) drawn live as characters, ten frames a second.
-  // If the frames cannot be read, the video goes and the still cover shows; if they read
-  // as solid black (protected video), the original video is left to play as it is.
-  const videos = new Set();
-  function videoArt(v) {
-    if (v.dataset.ber) return;
+  // Moving pictures drawn live as characters, ten frames a second: video (Canvas loops,
+  // music videos) and Spotify's own animations on <canvas> (the DJ's ring).
+  // A video that can't be read is hidden and the cover shows; one that reads as solid black
+  // (protected video) is left to play as it is. An animation that can't be read gets the ring.
+  const movers = new Set();
+  function moverArt(v) {
+    if (v.dataset.ber || v.classList.contains("ber-video")) return;
     v.dataset.ber = "1";
     const out = v.ownerDocument.createElement("canvas");
     out.className = "ber-video";
     v.after(out);
-    videos.add({ v, out, dark: 0 });
+    movers.add({ v, out, dark: 0, video: v.tagName === "VIDEO" });
   }
   setInterval(() => {
-    for (const item of videos) {
+    for (const item of movers) {
       const { v, out } = item;
-      if (!v.isConnected) { out.remove(); videos.delete(item); continue; }
+      if (!v.isConnected) { out.remove(); movers.delete(item); continue; }
       const w = Math.round(v.clientWidth), h = Math.round(v.clientHeight);
-      if (w < 20 || h < 20 || v.readyState < 2) continue;
+      if (w < 40 || h < 40 || (item.video && v.readyState < 2)) continue;
       out.style.cssText = `position:absolute;left:${v.offsetLeft}px;top:${v.offsetTop}px;width:${w}px;height:${h}px;pointer-events:none;`;
+      if (item.still) continue;
       try {
-        const light = paint(v, w, h, out, getComputedStyle(v).objectFit === "cover");
-        item.dark = light < 1 && !v.paused ? item.dark + 1 : 0;
-        if (item.dark > 30) { delete v.dataset.berDrawn; out.remove(); videos.delete(item); continue; }
+        const light = paint(v, w, h, out, item.video && getComputedStyle(v).objectFit === "cover");
+        item.dark = light < 1 && !(item.video && v.paused) ? item.dark + 1 : 0;
+        if (item.dark > 30) {
+          if (item.video) { delete v.dataset.berDrawn; out.remove(); movers.delete(item); continue; }
+          still(item, w, h);
+          continue;
+        }
         v.dataset.berDrawn = "";
       } catch {
-        v.dataset.berHide = "";
-        v.ownerDocument.documentElement.dataset.berNoCanvas = "";
-        out.remove();
-        videos.delete(item);
+        if (item.video) {
+          v.dataset.berHide = "";
+          v.ownerDocument.documentElement.dataset.berNoCanvas = "";
+          out.remove();
+          movers.delete(item);
+        } else {
+          still(item, w, h);
+        }
       }
     }
   }, 100);
+
+  function still(item, w, h) {
+    item.still = true;
+    item.v.dataset.berDrawn = "";
+    const im = new Image();
+    im.onload = () => {
+      const dpr = window.devicePixelRatio || 1;
+      item.out.width = Math.round(w * dpr); item.out.height = Math.round(h * dpr);
+      item.out.getContext("2d").drawImage(im, 0, 0, item.out.width, item.out.height);
+    };
+    im.src = ring(w, h);
+  }
 
   // ============================================================ icons as words
 
@@ -495,7 +517,7 @@
     for (const el of els) {
       switch (el.tagName) {
         case "svg": iconify(el); continue;
-        case "VIDEO": videoArt(el); continue;
+        case "VIDEO": case "CANVAS": moverArt(el); continue;
       }
       if (el.dataset?.testid === "user-widget-link") word(el);
     }

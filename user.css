@@ -82,7 +82,8 @@ body *:not(svg):not(svg *):not(canvas) {
 }
 
 /* Live video drawn as characters by theme.js sits over the hidden original. */
-video[data-ber-drawn] {
+video[data-ber-drawn],
+canvas[data-ber-drawn]:not(.ber-video) {
   opacity: 0 !important;
 }
 
