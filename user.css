@@ -412,7 +412,7 @@ html.ber-mini,
 }
 
 /* Canvas (the looping video) is drawn live in characters by theme.js; the shading Spotify
-   lays over it goes. If a Canvas cannot be read, the still cover art shows instead. */
+   lays over it goes. If a Canvas cannot be read, it is hidden and the cover shows. */
 .main-nowPlayingView-canvasVisualEnhancement::before,
 .main-nowPlayingView-canvasVisualEnhancement::after,
 .main-nowPlayingView-contextItemInfo::before {
@@ -423,8 +423,9 @@ html.ber-mini,
   display: none !important;
 }
 
-[data-ber-no-canvas] .main-nowPlayingView-coverArtVisualEnhancement,
-[data-ber-no-canvas] .main-nowPlayingView-coverArtVisualEnhancement * {
+/* The cover always shows underneath; a playing Canvas, drawn in characters, covers it. */
+.main-nowPlayingView-coverArtVisualEnhancement,
+.main-nowPlayingView-coverArtVisualEnhancement * {
   opacity: 1 !important;
   visibility: visible !important;
 }
@@ -541,17 +542,13 @@ textarea {
 /* ----------------------------------------------------------- covers */
 
 /* theme.js redraws every cover as coloured characters. Until it has,
-   and wherever it cannot read one, the picture stays dark and grey. */
+   the picture stays dark and grey. */
 img:not([style*="content"]):not([class*="marketplace-card"] img) {
   filter: grayscale(1) brightness(0.35);
 }
 
 img[style*="content"] {
   opacity: 1 !important;
-}
-
-img.ber-unreadable {
-  filter: grayscale(1) contrast(1.2);
 }
 
 /* `ls` does not show thumbnails. */

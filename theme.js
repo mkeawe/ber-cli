@@ -119,6 +119,28 @@
     return arts.get(key);
   }
 
+  // A picture Spotify won't let the theme read (the DJ's artwork) is drawn from scratch:
+  // a ring in the signal colour, rendered in characters like every other cover.
+  const rings = new Map();
+  function ring(w, h) {
+    const key = `${w}x${h}`;
+    if (!rings.has(key)) {
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const x = c.getContext("2d");
+      x.fillStyle = "#000"; x.fillRect(0, 0, w, h);
+      x.strokeStyle = css("--spice-button") || "#5fd75f";
+      x.lineWidth = Math.max(4, Math.min(w, h) * 0.22);
+      x.beginPath();
+      x.arc(w / 2, h / 2, Math.min(w, h) * 0.28, 0, Math.PI * 2);
+      x.stroke();
+      const out = document.createElement("canvas");
+      paint(c, w, h, out);
+      rings.set(key, out.toDataURL());
+    }
+    return rings.get(key);
+  }
+
   const drawn = new WeakMap(); // element -> key it was drawn for
 
   async function imgArt(img) {
@@ -134,9 +156,8 @@
     const key = `${src}|${w}x${h}`;
     if (drawn.get(img) === key) return;
     drawn.set(img, key);
-    const url = await art(src, w, h);
+    const url = (await art(src, w, h)) || ring(w, h);
     if ((img.currentSrc || img.src) !== src) return;
-    if (!url) { img.classList.add("ber-unreadable"); return; }
     img.style.setProperty("content", `url(${url})`);
   }
 
