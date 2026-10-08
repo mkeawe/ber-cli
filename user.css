@@ -591,7 +591,7 @@ textarea {
 
 /* theme.js redraws every cover as coloured characters. Until it has,
    the picture stays dark and grey. */
-img:not([style*="content"]):not([class*="marketplace-card"] img) {
+img:not([style*="content"]):not([class*="marketplace-card"] img):not([class*="marketplace-readme"] img) {
   filter: grayscale(1) brightness(0.35);
 }
 
@@ -921,10 +921,18 @@ button[data-testid="play-button"][data-ber-word],
   color: var(--ber-fg) !important;
 }
 
-/* Theme and extension previews are screenshots: shown as they are, not redrawn. */
+/* Theme and extension previews (cards, readmes) are screenshots: shown as they are. */
 [class*="marketplace-card"] img,
+[class*="marketplace-readme"] img,
 [class*="marketplace"] .main-cardImage-image {
   filter: none !important;
+}
+
+/* A dark screenshot on a dark card would read as nothing: a ruled edge marks it. */
+[class*="marketplace-card"] .main-cardImage-image,
+[class*="marketplace-readme"] img {
+  outline: 1px solid var(--ber-box);
+  outline-offset: -1px;
 }
 
 /* ----------------------------------------------------------- search pop-up */

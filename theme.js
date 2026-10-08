@@ -205,8 +205,9 @@
     const w = Math.round(sw ?? img.clientWidth);
     const h = Math.round(sh ?? img.clientHeight);
     if (!w || !h) return;
-    // Marketplace previews are screenshots of themes and extensions: left as they are.
-    if (img.dataset.berPreview === undefined) img.dataset.berPreview = img.closest('[class*="marketplace-card"]') ? "1" : "";
+    // Marketplace previews (on cards and in readmes) are screenshots of themes and
+    // extensions: left as they are.
+    if (img.dataset.berPreview === undefined) img.dataset.berPreview = img.closest('[class*="marketplace-card"], [class*="marketplace-readme"]') ? "1" : "";
     if (img.dataset.berPreview) return;
     // Too small to draw in characters (menu and list icons): it goes.
     if (w < 20 || h < 20) { img.dataset.berHide = ""; return; }
