@@ -855,6 +855,32 @@ button[data-testid="play-button"][data-ber-word],
   margin-top: 0.5em;
 }
 
+/* Its dropdowns (sort, colour scheme) are ruled boxes; the chosen and hovered rows are
+   reverse video. */
+.Dropdown-menu {
+  background: var(--ber-bg) !important;
+  border: 1px solid var(--ber-dim) !important;
+  outline: none !important;
+}
+
+.Dropdown-option {
+  background: transparent !important;
+  color: var(--ber-fg) !important;
+  outline: none !important;
+}
+
+.Dropdown-option.is-selected,
+.Dropdown-option:hover {
+  background: var(--ber-fg) !important;
+  color: var(--ber-bg) !important;
+}
+
+.Dropdown-control {
+  background: transparent !important;
+  border: 1px solid var(--ber-box) !important;
+  color: var(--ber-fg) !important;
+}
+
 /* Theme and extension previews are screenshots: shown as they are, not redrawn. */
 [class*="marketplace-card"] img,
 [class*="marketplace"] .main-cardImage-image {

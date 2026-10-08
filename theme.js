@@ -80,8 +80,9 @@
     if (out.height !== Math.round(h * dpr)) out.height = Math.round(h * dpr);
     const ctx = out.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = css("--spice-main") || "#0a0a0a";
-    ctx.fillRect(0, 0, w, h);
+    // Clear, not filled: the screen shows through between characters, so drawings
+    // stay right when the scheme changes.
+    ctx.clearRect(0, 0, w, h);
     ctx.font = `${size}px ${FACE}`;
     ctx.textBaseline = "middle";
 
@@ -156,7 +157,8 @@
     const key = `${src}|${w}x${h}`;
     if (drawn.get(img) === key) return;
     drawn.set(img, key);
-    const url = (await art(src, w, h)) || ring(w, h);
+    let url = await art(src, w, h);
+    if (url) delete img.dataset.berRing; else { url = ring(w, h); img.dataset.berRing = ""; }
     if ((img.currentSrc || img.src) !== src) return;
     img.style.setProperty("content", `url(${url})`);
   }
@@ -378,6 +380,32 @@
 
   // The scheme's own colours, as "r,g,b": never mistaken for a wash, however colourful.
   const own = new Set();
+  const OWN_KEYS = ["main", "main-elevated", "highlight", "highlight-elevated", "sidebar", "player", "card",
+    "misc", "text", "subtext", "button", "button-active", "tab-active", "notification", "notification-error"];
+  let ownKey = "";
+  function readOwn() {
+    const vals = OWN_KEYS.map((k) => css(`--spice-rgb-${k}`).replace(/\s/g, "")).filter(Boolean);
+    own.clear();
+    vals.forEach((v) => own.add(v));
+    ownKey = vals.join("|");
+  }
+
+  // The scheme can be changed live (the Marketplace dropdown). When it is, everything judged
+  // against the old colours is judged again, and the signal-colour drawings are redrawn.
+  function schemeWatch() {
+    const key = OWN_KEYS.map((k) => css(`--spice-rgb-${k}`).replace(/\s/g, "")).filter(Boolean).join("|");
+    if (!key || key === ownKey) return;
+    readOwn();
+    rings.clear();
+    for (const doc of docs) {
+      doc.querySelectorAll("[data-ber-tint], [data-ber-flat], [data-ber-flat-pseudo], [data-ber-grey]").forEach((el) => {
+        delete el.dataset.berTint; delete el.dataset.berFlat; delete el.dataset.berFlatPseudo; delete el.dataset.berGrey;
+      });
+      doc.querySelectorAll("[data-ber-placeholder]").forEach((el) => { el.style.removeProperty("background-image"); delete el.dataset.berPlaceholder; });
+      doc.querySelectorAll("img[data-ber-ring]").forEach((img) => { drawn.delete(img); imgArt(img); });
+      reflatten(doc.body);
+    }
+  }
   function chromatic(c) {
     const m = c.match(/rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)/);
     if (!m) return false;
@@ -671,11 +699,8 @@
 
   face().finally(() => {
     measure();
-    for (const k of ["main", "main-elevated", "highlight", "highlight-elevated", "sidebar", "player", "card",
-      "misc", "text", "subtext", "button", "button-active", "tab-active", "notification", "notification-error"]) {
-      const rgb = css(`--spice-rgb-${k}`).replace(/\s/g, "");
-      if (rgb) own.add(rgb);
-    }
+    readOwn();
+    setInterval(schemeWatch, 1000);
     attach(document, true);
   });
   Spicetify.Platform.History.listen(() => { prompt(); setTimeout(() => reflatten(document.body), 1500); });
