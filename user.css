@@ -746,6 +746,28 @@ button[data-testid="play-button"][data-ber-word],
   pointer-events: none;
 }
 
+/* ----------------------------------------------------------- collapsed library */
+
+/* Collapsed, the library is a narrow column: its keys sit centred in it. */
+.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
+.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) * {
+  padding-inline: 0 !important;
+  margin-inline: 0 !important;
+}
+
+.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
+.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+.main-yourLibraryX-header:has(button[aria-label="Open Your Library"]) [data-ber-word] {
+  padding-inline: 0.5ch !important;
+}
+
 /* ----------------------------------------------------------- window */
 
 /* [back] starts clear of the window's close / minimise / zoom buttons.
@@ -857,7 +879,7 @@ div:has(> [class*="contentSpacing"] > .search-searchCategory-contentArea) *::aft
   white-space: pre;
 }
 
-/* A shelf's subtitle and title sit on one line: "# Made For micah". */
+/* A shelf's subtitle and title sit on one line: "# Made For you". */
 [class*="list-row__header"]:has(> [class*="list-row__column"] > h2) {
   flex-wrap: nowrap !important;
   align-items: center !important;

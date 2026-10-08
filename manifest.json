@@ -7,7 +7,7 @@
     "usercss": "user.css",
     "schemes": "color.ini",
     "include": ["https://raw.githubusercontent.com/mkeawe/ber-cli/main/theme.js"],
-    "authors": [{ "name": "Micah Keawe", "url": "https://github.com/mkeawe" }],
+    "authors": [{ "name": "GENTLE ENGINES", "url": "https://github.com/mkeawe/ber-cli" }],
     "tags": ["dark", "minimal", "monospace", "terminal", "ascii"]
   }
 ]
