@@ -33,7 +33,7 @@ spicetify apply
 `overwrite_assets 1` copies the bundled font into Spotify. Without it, theme.js
 fetches the same file from this repo.
 
-Schemes: `beebee`, `cloud`, `Ek`, `highway`, `kabukicho`, `lasanga`, `lonely`,
+Schemes: `beebee`, `cloud`, `Ek`, `highway`, `kabukicho`, `lasagna`, `lonely`,
 `oscar`, `pinku`, `retro`, `university`.
 
 Built for Spotify 1.3.x and Spicetify 2.45. Spotify changes its markup often;
