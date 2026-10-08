@@ -289,6 +289,14 @@ canvas.ber-video {
   background-color: var(--ber-row) !important;
 }
 
+/* Around an icon drawn as a cover: no grey square, no edge. */
+[data-ber-frame],
+[data-ber-stand] {
+  background-color: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+}
+
 :root {
   --image-placeholder-bg-color: var(--ber-row);
   --generic-tooltip-background-color: var(--ber-bg);

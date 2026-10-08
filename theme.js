@@ -351,8 +351,47 @@
     if (on || pressed) host.dataset.berOn = ""; else delete host.dataset.berOn;
   }
 
+  // An icon standing in for a missing cover (Local Files, a playlist with no picture) is
+  // drawn in characters, in the signal colour, filling the cover's square like any cover.
+  function stand(svg) {
+    const box = svg.parentElement;
+    if (!box || box.dataset.berArt !== undefined || box.querySelector("img")) return false;
+    const b = box.getBoundingClientRect(), i = svg.getBoundingClientRect();
+    if (b.width < 40 || b.height < 40 || Math.abs(b.width - b.height) > 4 || i.width >= b.width * 0.9) return false;
+    const w = Math.round(b.width), h = Math.round(b.height);
+    const copy = svg.cloneNode(true);
+    copy.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    copy.setAttribute("width", 100); copy.setAttribute("height", 100);
+    copy.setAttribute("fill", css("--spice-button") || "#5fd75f");
+    copy.removeAttribute("class"); copy.removeAttribute("style");
+    const im = new Image();
+    im.onload = () => {
+      const src = document.createElement("canvas");
+      src.width = w; src.height = h;
+      const x = src.getContext("2d");
+      x.fillStyle = "#000"; x.fillRect(0, 0, w, h);
+      const s = Math.min(w, h) * 0.8;
+      x.drawImage(im, (w - s) / 2, (h - s) / 2, s, s);
+      const out = document.createElement("canvas");
+      try { paint(src, w, h, out); } catch { return; }
+      box.dataset.berArt = "";
+      box.dataset.berStand = "";
+      // The placeholder squares around it (same size) lose their grey fill and edge.
+      for (let a = box.parentElement; a; a = a.parentElement) {
+        const r = a.getBoundingClientRect();
+        if (Math.abs(r.width - w) > 2 || Math.abs(r.height - h) > 2) break;
+        a.dataset.berFrame = "";
+      }
+      box.style.setProperty("background", `url(${out.toDataURL()}) center / 100% 100% no-repeat`, "important");
+    };
+    im.src = "data:image/svg+xml," + encodeURIComponent(new XMLSerializer().serializeToString(copy));
+    svg.dataset.berHide = "";
+    return true;
+  }
+
   function iconify(svg) {
     if (svg.closest("[data-ber-word], .ber-keep")) return;
+    if (stand(svg)) return;
     const host = svg.closest(HOST);
     // A link that shows a picture (a cover) keeps the picture; only the icon goes.
     if (host && !(host.tagName === "A" && host.querySelector("img")) && (!shownText(host) || host.dataset.testid === "user-widget-link")) word(host, svg);
@@ -403,6 +442,10 @@
       });
       doc.querySelectorAll("[data-ber-placeholder]").forEach((el) => { el.style.removeProperty("background-image"); delete el.dataset.berPlaceholder; });
       doc.querySelectorAll("img[data-ber-ring]").forEach((img) => { drawn.delete(img); imgArt(img); });
+      doc.querySelectorAll("[data-ber-stand]").forEach((box) => {
+        delete box.dataset.berStand; delete box.dataset.berArt; box.style.removeProperty("background");
+        const svg = box.querySelector("svg"); if (svg) { delete svg.dataset.berHide; stand(svg); }
+      });
       reflatten(doc.body);
     }
   }
