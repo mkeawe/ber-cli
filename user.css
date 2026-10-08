@@ -699,6 +699,16 @@ img[style*="content"] {
   background: var(--ber-bg) !important;
 }
 
+/* The status line's play key is the signal colour; on hover it fills, as keys do. */
+[data-testid="control-button-playpause"][data-ber-word] {
+  color: var(--ber-signal) !important;
+}
+
+[data-testid="control-button-playpause"][data-ber-word]:hover {
+  background: var(--ber-signal) !important;
+  color: var(--ber-bg) !important;
+}
+
 /* The page's play key: the one filled block. */
 button[data-testid="play-button"][data-ber-word],
 [data-testid="action-bar-row"] .main-playButton-PlayButton [data-ber-word] {
