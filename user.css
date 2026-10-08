@@ -921,6 +921,21 @@ button[data-testid="play-button"][data-ber-word],
   color: var(--ber-fg) !important;
 }
 
+/* The readme's own Remove / Install is a bracketed command like any filled text button. */
+.marketplace-header__button {
+  display: inline-flex !important;
+  align-items: center;
+  background: transparent !important;
+  color: var(--ber-signal) !important;
+  border: 0 !important;
+  padding-inline: 0 !important;
+  min-block-size: 0 !important;
+  text-transform: lowercase;
+}
+
+.marketplace-header__button::before { content: "["; }
+.marketplace-header__button::after { content: "]"; }
+
 /* Theme and extension previews (cards, readmes) are screenshots: shown as they are. */
 [class*="marketplace-card"] img,
 [class*="marketplace-readme"] img,
