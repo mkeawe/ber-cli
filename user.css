@@ -2,7 +2,7 @@
   ber-cli — Spotify as a terminal, set in Departure Mono.
 
   What must always be true:
-  one face, one size, grey on black, square boxes, one signal colour.
+  one face, one size, one scheme's colours, square boxes, one signal colour.
   The only other colour on screen is the music's own artwork.
 */
 
@@ -32,7 +32,7 @@ body, button, input, textarea, select {
   font-family: var(--ber-face);
 }
 
-/* A terminal has one size. Headings are bold, not bigger. */
+/* A terminal has one size: headings are never bigger than anything else. */
 :root,
 .encore-layout-themes,
 .encore-small-devices-theme {
@@ -47,6 +47,14 @@ body, button, input, textarea, select {
   --encore-text-size-larger-3: var(--ber-size) !important;
   --encore-text-size-larger-4: var(--ber-size) !important;
   --encore-text-size-larger-5: var(--ber-size) !important;
+  /* And everything square: panes, keys, chips, covers, artists. */
+  --encore-corner-radius-smaller: 0 !important;
+  --encore-corner-radius-base: 0 !important;
+  --encore-corner-radius-larger: 0 !important;
+  --encore-list-row-border-radius: 0 !important;
+  --encore-button-corner-radius: 0 !important;
+  --encore-border-radius-rounded: 0 !important;
+  --encore-image-border-radius: 0 !important;
 }
 
 /* Spotify sizes page titles inline to fit; a terminal does not. */
@@ -54,7 +62,6 @@ body, button, input, textarea, select {
 [class*="encore-text-title"],
 .main-entityHeader-title h1,
 .main-entityHeader-title span {
-  font-size: var(--ber-size) !important;
   line-height: 1.5 !important;
 }
 
@@ -108,6 +115,9 @@ canvas.ber-video {
   --ber-row: var(--spice-highlight);
   --ber-box: var(--spice-misc);
   --ber-signal: var(--spice-button);
+  /* Spotify's own hooks for placeholder and tooltip colours. */
+  --image-placeholder-bg-color: var(--ber-row);
+  --generic-tooltip-background-color: var(--ber-bg);
 }
 
 /* The screen: grey on black. Spotify's accents become the signal. */
@@ -211,19 +221,6 @@ canvas.ber-video {
   --essential-base: var(--ber-bg);
 }
 
-/* Everything square: panes, keys, chips, covers, artists. */
-:root,
-.encore-layout-themes,
-.encore-small-devices-theme {
-  --encore-corner-radius-smaller: 0 !important;
-  --encore-corner-radius-base: 0 !important;
-  --encore-corner-radius-larger: 0 !important;
-  --encore-list-row-border-radius: 0 !important;
-  --encore-button-corner-radius: 0 !important;
-  --encore-border-radius-rounded: 0 !important;
-  --encore-image-border-radius: 0 !important;
-}
-
 *,
 *::before,
 *::after {
@@ -297,10 +294,6 @@ canvas.ber-video {
   outline: 0 !important;
 }
 
-:root {
-  --image-placeholder-bg-color: var(--ber-row);
-  --generic-tooltip-background-color: var(--ber-bg);
-}
 
 /* The drag handle between panes. */
 .LayoutResizer__input {
@@ -413,7 +406,7 @@ html.ber-mini,
   background: none !important;
 }
 
-/* The details line sits tight: "micah · 581 songs, 35 hr". Only its ends are padded. */
+/* The details line sits tight: "you · 581 songs, 35 hr". Only its ends are padded. */
 .main-entityHeader-headerText .main-entityHeader-metaDataText *,
 .main-entityHeader-headerText :has(> [data-separator]) *,
 .main-entityHeader-headerText [data-separator] {
@@ -595,12 +588,6 @@ textarea {
 [data-testid="lyrics-npv-section"] {
   background: var(--ber-bg) !important;
 }
-
-
-
-/* ================================================================
-   Further: as little of Spotify as possible.
-   ================================================================ */
 
 /* ----------------------------------------------------------- covers */
 
@@ -1038,6 +1025,8 @@ button[data-testid="play-button"][data-ber-word],
 .main-globalNav-searchInputSection form {
   width: 100% !important;
   max-width: none !important;
+  display: flex !important;
+  align-items: center;
 }
 
 .main-globalNav-searchInputWrapper {
@@ -1048,6 +1037,7 @@ button[data-testid="play-button"][data-ber-word],
   background: transparent !important;
 }
 
+/* The prompt; a long path gives way (with an ellipsis) before the cursor does. */
 .main-globalNav-searchInputWrapper::before {
   content: attr(data-ber-prompt) " ";
   order: 0;
@@ -1055,6 +1045,9 @@ button[data-testid="play-button"][data-ber-word],
   color: var(--ber-signal);
   font-size: var(--ber-size);
   flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .main-globalNav-searchInputWrapper:has(input:placeholder-shown:not(:focus))::after {
@@ -1085,11 +1078,6 @@ button[data-testid="play-button"][data-ber-word],
 
 /* [clear] follows what you type instead of sitting pinned over it, and only appears
    once there is something to clear. */
-.main-globalNav-searchInputSection form {
-  display: flex !important;
-  align-items: center;
-}
-
 .main-globalNav-searchInputSection form > .main-globalNav-searchInputWrapper {
   flex: 1 1 auto;
   min-width: 0;
@@ -1104,13 +1092,6 @@ button[data-testid="play-button"][data-ber-word],
 
 .main-globalNav-searchInputSection form:has(input:placeholder-shown) [class*="form-input-icon__icon--trailing"] {
   display: none !important;
-}
-
-/* A long path gives way before the cursor does. */
-.main-globalNav-searchInputWrapper::before {
-  max-width: 60%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 @keyframes ber-blink {
