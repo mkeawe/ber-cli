@@ -122,6 +122,8 @@
   const drawn = new WeakMap(); // element -> key it was drawn for
 
   async function imgArt(img) {
+    // Marketplace previews are screenshots of themes and extensions: left as they are.
+    if (img.closest('[class*="marketplace-card"]')) return;
     const src = img.currentSrc || img.src;
     if (!src || src.startsWith("data:")) return;
     const w = Math.round(img.clientWidth);
@@ -230,12 +232,12 @@
     '.spicetify-sc-chevronBtn, .search-searchCategory-carouselButton';
 
   // Text a person can actually see (screen-reader-only labels do not count).
+  // Decided from the markup alone, so it never forces a layout.
+  const UNSEEN = '[data-ber-hide], .hidden-visually, [class*="visually-hidden"], [class*="sr-only"]';
   function shownText(el) {
     const walk = el.ownerDocument.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-      if (!n.textContent.trim() || n.parentElement.closest("[data-ber-hide]")) continue;
-      const r = n.parentElement.getBoundingClientRect();
-      if (r.width > 2 && r.height > 2) return true;
+      if (n.textContent.trim() && !n.parentElement.closest(UNSEEN)) return true;
     }
     return false;
   }
@@ -256,6 +258,10 @@
     }
     if (/dj-button/.test(host.innerHTML)) return "dj";
     return "";
+  }
+
+  function setWord(host, text) {
+    if (host.dataset.berWord !== text) host.dataset.berWord = text;
   }
 
   function word(host, svg) {
@@ -281,11 +287,18 @@
     if (!w && host.closest('[style*="mini-player-drag"]')) w = "close";
     // A filter chip that is only a cross clears the filter.
     if (!w && host.getAttribute("role") === "option") w = "x";
-    if (!w) w = "?";
+    // A search suggestion's magnifier: the line reads like a command to run.
+    if (!w && (host.getAttribute("href") || "").startsWith("/search/")) { setWord(host, ">"); return; }
+    // Anything else unlabelled is decoration: the icon goes and nothing replaces it.
+    if (!w) {
+      if (host.dataset.berWord) delete host.dataset.berWord;
+      if (svg) svg.dataset.berHide = "";
+      return;
+    }
     const inRow = host.closest(".main-trackList-trackListRow");
     const inMini = host.ownerDocument !== document;
     const text = inRow && SHORT[w] ? SHORT[w] : `[${inMini && MINI[w] || w}]`;
-    if (host.dataset.berWord !== text) host.dataset.berWord = text;
+    setWord(host, text);
     const pressed = host.getAttribute("aria-pressed") === "true" || host.getAttribute("aria-checked") === "true" ||
       host.getAttribute("aria-selected") === "true";
     if (on || pressed) host.dataset.berOn = ""; else delete host.dataset.berOn;
@@ -330,17 +343,29 @@
   }
 
   // Colour washes, tinted boxes and gradients Spotify paints from the artwork go flat.
-  function flatten(el) {
-    if (el.dataset.berArt !== undefined || /^(IMG|CANVAS|VIDEO|svg|path)$/i.test(el.tagName)) return;
+  // Only boxes can paint a wash; text and inline elements are skipped.
+  const BOXES = /^(DIV|SECTION|ASIDE|HEADER|FOOTER|MAIN|NAV|LI|UL|BUTTON|A)$/;
+
+  // Reads only: returns the attribute to set, so a batch can read everything first and
+  // write after, instead of making the browser redo its layout between every element.
+  function washOf(el) {
+    if (!BOXES.test(el.tagName) || el.dataset.berArt !== undefined) return null;
     const cs = getComputedStyle(el);
     const bi = cs.backgroundImage;
-    if (bi !== "none" && /gradient/.test(bi) && !/url\(/.test(bi)) el.dataset.berFlat = "";
-    else if (chromatic(cs.backgroundColor)) el.dataset.berTint = "";
+    if (bi !== "none" && /gradient/.test(bi) && !/url\(/.test(bi)) return "berFlat";
+    if (chromatic(cs.backgroundColor)) return "berTint";
+    if (el.tagName !== "DIV") return null;
     for (const p of ["::before", "::after"]) {
       const ps = getComputedStyle(el, p);
       if (ps.content === "none") continue;
-      if (/gradient/.test(ps.backgroundImage) || chromatic(ps.backgroundColor)) { el.dataset.berFlatPseudo = ""; break; }
+      if (/gradient/.test(ps.backgroundImage) || chromatic(ps.backgroundColor)) return "berFlatPseudo";
     }
+    return null;
+  }
+
+  function flatten(el) {
+    const k = washOf(el);
+    if (k) el.dataset[k] = "";
   }
 
   const pending = new Set();
@@ -431,25 +456,40 @@
     img.addEventListener("load", () => imgArt(img));
   }
 
-  function sweep(root, lazy) {
-    const all = root.querySelectorAll ? root.querySelectorAll("*") : [];
-    const one = (el) => {
+  function sweep(roots, lazy) {
+    const els = [];
+    for (const root of roots) {
+      if (!root.isConnected) continue;
+      if (root.nodeType === 1) els.push(root);
+      els.push(...root.querySelectorAll("*"));
+    }
+    // Read phase: colours only.
+    const washes = [];
+    for (const el of els) {
+      const k = washOf(el);
+      if (k) washes.push([el, k]);
+    }
+    // Write phase.
+    for (const [el, k] of washes) el.dataset[k] = "";
+    for (const el of els) {
       switch (el.tagName) {
-        case "IMG": watchImg(el, lazy); return;
-        case "VIDEO": videoArt(el); return;
-        case "svg": iconify(el); return;
+        case "svg": iconify(el); continue;
+        case "VIDEO": videoArt(el); continue;
       }
       if (el.dataset?.testid === "user-widget-link") word(el);
-      if (el.style?.backgroundImage) { bgArt(el); sized.observe(el); }
-      flatten(el);
-    };
-    if (root.nodeType === 1) one(root);
-    all.forEach(one);
+    }
+    // Pictures last: they measure sizes, once, after the writes.
+    for (const el of els) {
+      if (el.tagName === "IMG") watchImg(el, lazy);
+      else if (el.style?.backgroundImage) { bgArt(el); sized.observe(el); }
+    }
   }
 
   function attach(doc, lazy) {
     if (docs.has(doc)) return;
     docs.add(doc);
+    const added = new Set();
+    let queued = false;
     new MutationObserver((records) => {
       for (const r of records) {
         const t = r.target;
@@ -473,7 +513,16 @@
           if (t.matches?.(HOST) && (t.dataset.berWord !== undefined || t.querySelector("svg"))) word(t);
           continue;
         }
-        r.addedNodes.forEach((n) => n.nodeType === 1 && sweep(n, lazy));
+        r.addedNodes.forEach((n) => n.nodeType === 1 && added.add(n));
+      }
+      if (added.size && !queued) {
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          const roots = [...added].filter((n) => ![...added].some((m) => m !== n && m.contains(n)));
+          added.clear();
+          sweep(roots, lazy);
+        });
       }
       if (doc === document) prompt();
     }).observe(doc.body, {
@@ -482,7 +531,7 @@
     });
     doc.addEventListener("pointerover", syncHover, true);
     doc.addEventListener("transitionend", syncHover, true);
-    sweep(doc.body, lazy);
+    sweep([doc.body], lazy);
   }
 
   // ============================================================ miniplayer

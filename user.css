@@ -542,7 +542,7 @@ textarea {
 
 /* theme.js redraws every cover as coloured characters. Until it has,
    and wherever it cannot read one, the picture stays dark and grey. */
-img:not([style*="content"]) {
+img:not([style*="content"]):not([class*="marketplace-card"] img) {
   filter: grayscale(1) brightness(0.35);
 }
 
@@ -746,7 +746,63 @@ button[data-testid="play-button"][data-ber-word],
   pointer-events: none;
 }
 
-/* ----------------------------------------------------------- collapsed library */
+/* ----------------------------------------------------------- marketplace */
+
+/* A Marketplace card's install key sits in the card's flow, under its tags, not over them. */
+[class*="marketplace-card"] .main-card-PlayButtonContainer {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  opacity: 1 !important;
+  margin-top: 0.5em;
+}
+
+/* Theme and extension previews are screenshots: shown as they are, not redrawn. */
+[class*="marketplace-card"] img,
+[class*="marketplace"] .main-cardImage-image {
+  filter: none !important;
+}
+
+/* ----------------------------------------------------------- search pop-up */
+
+/* The suggestions under the prompt are one box drawn over the screen: black, ruled edge. */
+.main-globalNav-searchSection [role="listbox"] {
+  background: var(--ber-bg) !important;
+  border: 1px solid var(--ber-dim) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.main-globalNav-searchSection [role="listbox"] * {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* The suggestion under the cursor (keyboard or mouse) is reverse video. */
+.main-globalNav-searchSection [role="listbox"] [role="row"]:hover,
+.main-globalNav-searchSection [role="listbox"] [role="option"]:hover,
+.main-globalNav-searchSection [role="listbox"] [aria-selected="true"],
+.main-globalNav-searchSection [role="listbox"] [data-focus-visible],
+.main-globalNav-searchSection [role="listbox"] [data-focused] {
+  background-color: var(--ber-fg) !important;
+}
+
+.main-globalNav-searchSection [role="listbox"] [role="row"]:hover *,
+.main-globalNav-searchSection [role="listbox"] [role="option"]:hover *,
+.main-globalNav-searchSection [role="listbox"] [aria-selected="true"] *,
+.main-globalNav-searchSection [role="listbox"] [data-focus-visible] *,
+.main-globalNav-searchSection [role="listbox"] [data-focused] * {
+  color: var(--ber-bg) !important;
+}
+
+/* Keyboard hints read as plain keys. */
+.main-globalNav-searchSection kbd {
+  border: 1px solid var(--ber-box) !important;
+  background: transparent !important;
+  color: var(--ber-dim) !important;
+}
+
+
 
 /* Collapsed, the library is a narrow column: its keys sit centred in it. */
 .main-yourLibraryX-header:has(button[aria-label="Open Your Library"]),
