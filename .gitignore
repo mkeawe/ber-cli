@@ -1,2 +1,20 @@
 .DS_Store
 font-mockups/
+
+# Keep local environment values out of Git; allow example files.
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+!.env.example
+!.env.*.example
+!.dev.vars.example
+!.dev.vars.*.example
+!.env.sample
+!.env.*.sample
+!.dev.vars.sample
+!.dev.vars.*.sample
+!.env.template
+!.env.*.template
+!.dev.vars.template
+!.dev.vars.*.template
