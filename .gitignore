@@ -18,3 +18,9 @@ font-mockups/
 !.env.*.template
 !.dev.vars.template
 !.dev.vars.*.template
+
+# Placeholder exceptions apply to files; keep environment directories private.
+.env/
+.env.*/
+.dev.vars/
+.dev.vars.*/
